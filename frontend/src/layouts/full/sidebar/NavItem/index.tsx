@@ -5,9 +5,14 @@ import {
   ListItemText,
   styled,
   useTheme,
+  Tooltip,
+  Collapse,
 } from "@mui/material";
-import React from "react";
+import React, { useState } from "react";
+import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { NavLink } from "react-router";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../../redux/store";
 export interface NavHeaderItemType {
   navlabel: true;
   subheader: string;
@@ -20,6 +25,7 @@ export interface NavItemType {
   title: string;
   external?: boolean;
   disabled?: boolean;
+  children?: NavItemType[];
 }
 
 interface NavItemProps {
@@ -38,16 +44,27 @@ const NavItem: React.FC<NavItemProps> = ({
 }) => {
   const Icon = item.icon;
   const theme = useTheme();
+  const sidebarCompact = useSelector((state: RootState) => state.theme?.sidebarCompact ?? false);
   const itemIcon = <Icon stroke={1.5} size="1.3rem" />;
+  const [open, setOpen] = useState(false);
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (item.children) {
+      setOpen(!open);
+    } else if (onClick) {
+      onClick();
+    }
+  };
 
   const ListItemStyled = styled(ListItemButton)(() => ({
     whiteSpace: "nowrap",
     marginBottom: "2px",
-    padding: "7px 10px",
+    padding: sidebarCompact ? "10px" : "7px 10px",
+    justifyContent: sidebarCompact ? "center" : "flex-start",
     borderRadius: "6px",
     backgroundColor: level > 1 ? "transparent !important" : "inherit",
     color: theme.palette.text.secondary,
-    paddingLeft: "10px",
+    paddingLeft: sidebarCompact ? "10px" : "10px",
     fontSize: "0.875rem",
     fontWeight: 500,
     transition: "background-color 150ms ease, color 150ms ease",
@@ -69,7 +86,9 @@ const NavItem: React.FC<NavItemProps> = ({
 
   const isExternal = item.external;
 
-  const listItemProps = isExternal
+  const listItemProps = item.children
+    ? { component: "div" }
+    : isExternal
     ? {
         component: "a",
         href: item.href,
@@ -83,23 +102,44 @@ const NavItem: React.FC<NavItemProps> = ({
 
   return (
     <List component="li" disablePadding key={item.id}>
-      <ListItemStyled
-        {...listItemProps}
-        disabled={item.disabled}
-        selected={pathDirect === item.href}
-        onClick={onClick}
-      >
-        <ListItemIcon
-          sx={{
-            minWidth: "36px",
-            p: "3px 0",
-            color: "inherit",
-          }}
+      <Tooltip title={sidebarCompact ? item.title : ""} placement="right">
+        <ListItemStyled
+          {...listItemProps}
+          disabled={item.disabled}
+          selected={pathDirect === item.href}
+          onClick={handleClick}
         >
-          {itemIcon}
-        </ListItemIcon>
-        <ListItemText primary={item.title} />
-      </ListItemStyled>
+          <ListItemIcon
+            sx={{
+              minWidth: sidebarCompact ? 0 : "36px",
+              p: "3px 0",
+              color: "inherit",
+            }}
+          >
+            {itemIcon}
+          </ListItemIcon>
+          {!sidebarCompact && <ListItemText primary={item.title} />}
+          {!sidebarCompact && item.children && (
+            open ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />
+          )}
+        </ListItemStyled>
+      </Tooltip>
+      {item.children && !sidebarCompact && (
+        <Collapse in={open} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding sx={{ pl: 2 }}>
+            {item.children.map((child) => (
+              <NavItem
+                key={child.id}
+                item={child}
+                level={level + 1}
+                pathDirect={pathDirect}
+                onClick={onClick}
+                disabled={child.disabled}
+              />
+            ))}
+          </List>
+        </Collapse>
+      )}
     </List>
   );
 };

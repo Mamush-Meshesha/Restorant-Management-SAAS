@@ -8,6 +8,8 @@ import {
 } from "@mui/material";
 import SidebarItems from "./SidebarItems";
 import { motion } from "framer-motion";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../redux/store";
 
 import { IconToolsKitchen2 } from "@tabler/icons-react";
 
@@ -20,9 +22,9 @@ const MSidebar = ({
   isMobileSidebarOpen: boolean;
   onSidebarClose: () => void;
 }) => {
-  const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
-  const sidebarWidth = "280px";
-
+  const lgUp = useMediaQuery((theme: any) => theme.breakpoints.up("lg"));
+  const sidebarCompact = useSelector((state: RootState) => state.theme?.sidebarCompact ?? false);
+  const sidebarWidth = lgUp && sidebarCompact ? "85px" : "280px";
   // Enhanced scrollbar styles
   const scrollbarStyles = {
     "&::-webkit-scrollbar": {
@@ -46,7 +48,7 @@ const MSidebar = ({
     alignItems: "center",
     padding: theme.spacing(0, 2),
     borderBottom: `1px solid ${theme.palette.divider}`,
-    background: theme.palette.background.paper,
+    backgroundColor: theme.palette.background.paper,
   }));
 
   const FooterSection = styled(Box)(({ theme }) => ({
@@ -79,8 +81,8 @@ const MSidebar = ({
             sx: {
               boxSizing: "border-box",
               width: sidebarWidth,
-              borderRight: `1px solid ${alpha("#000000", 0.1)}`,
-              background: "#ffffff",
+              borderRight: (theme) => `1px solid ${theme.palette.divider}`,
+              bgcolor: "background.paper",
               boxShadow: "none",
               ...scrollbarStyles,
             },
@@ -132,27 +134,29 @@ const MSidebar = ({
                 >
                   <IconToolsKitchen2 size={32} color="white" />
                 </Box>
-                <Box>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 700,
-                      color: "text.primary",
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    Restaurant POS
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: "text.secondary",
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Management System
-                  </Typography>
-                </Box>
+                {!sidebarCompact && (
+                  <Box>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        color: "text.primary",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      Restaurant POS
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "text.secondary",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      Management System
+                    </Typography>
+                  </Box>
+                )}
               </motion.div>
             </LogoSection>
 
@@ -162,7 +166,7 @@ const MSidebar = ({
             </Box>
 
             {/* Footer Section */}
-            <FooterSection>
+            <FooterSection sx={{ display: sidebarCompact ? "none" : "block" }}>
               <Typography
                 variant="caption"
                 sx={{
@@ -202,8 +206,8 @@ const MSidebar = ({
       PaperProps={{
         sx: {
           width: sidebarWidth,
-          borderRight: `1px solid ${alpha("#000000", 0.1)}`,
-          background: "#ffffff",
+          borderRight: (theme) => `1px solid ${theme.palette.divider}`,
+          bgcolor: "background.paper",
           boxShadow: (theme) => theme.shadows[8],
           ...scrollbarStyles,
         },

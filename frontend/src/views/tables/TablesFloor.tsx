@@ -31,9 +31,8 @@ export default function TablesFloor() {
   const [selected, setSelected] = useState<string | null>(null);
 
   const fetchTables = useCallback(async () => {
-    if (!branchId) return;
     try {
-      const { data } = await getTables({ branchId });
+      const { data } = await getTables(branchId ? { branchId } : {});
       setTables(data.data || []);
     } catch (error) {
       console.error("Failed to fetch tables:", error);

@@ -43,6 +43,8 @@ export interface MenuCategory {
   display_order: number;
   is_active: boolean;
   organization_id: string;
+  parent_id?: string | null;
+  subcategories?: MenuCategory[];
   items?: MenuItem[];
 }
 
@@ -108,7 +110,7 @@ export interface Table {
 // =============================================
 
 export type OrderType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED';
+export type OrderStatus = 'OPEN' | 'IN_PROGRESS' | 'READY' | 'SERVED' | 'CLOSED' | 'CANCELLED';
 
 export interface OrderItem {
   id: string;

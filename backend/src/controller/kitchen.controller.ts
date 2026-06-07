@@ -51,3 +51,45 @@ export const update_kitchen_order_status = async (req: AuthenticatedRequest, res
     res.status(200).json({ message: "Status updated", data: order });
   } catch (error) { next(error); }
 };
+
+export const create_kitchen_station = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { branch_id, name } = req.body;
+    const station = await prisma.kitchenStation.create({
+      data: { branch_id, name }
+    });
+    res.status(201).json({ message: "Station created", data: station });
+  } catch (error) { next(error); }
+};
+
+export const get_kitchen_stations = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { branchId } = req.query;
+    // In real app, must filter by organization/branch
+    const stations = await prisma.kitchenStation.findMany({
+      where: branchId ? { branch_id: String(branchId) } : {},
+      include: { branch: true }
+    });
+    res.status(200).json({ data: stations });
+  } catch (error) { next(error); }
+};
+
+export const update_kitchen_station = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { name, is_active } = req.body;
+    const station = await prisma.kitchenStation.update({
+      where: { id },
+      data: { name, is_active }
+    });
+    res.status(200).json({ message: "Station updated", data: station });
+  } catch (error) { next(error); }
+};
+
+export const delete_kitchen_station = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await prisma.kitchenStation.delete({ where: { id } });
+    res.status(200).json({ message: "Station deleted" });
+  } catch (error) { next(error); }
+};

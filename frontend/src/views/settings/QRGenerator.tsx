@@ -12,7 +12,7 @@ import {
   Grid
 } from '@mui/material';
 import { QrCode, Printer } from 'lucide-react';
-import axios from 'axios';
+import api from '../../api/index';
 import { toast } from 'react-toastify';
 
 export default function QRGenerator() {
@@ -30,7 +30,7 @@ export default function QRGenerator() {
   const generateMenuQR = async () => {
     setLoading(true);
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/v1/qr/menu`, {
+      const response = await api.post(`/qr/menu`, {
         branchId: 'MOCK_BRANCH_ID', // Usually from context/auth
         tableId: selectedTable || undefined
       });

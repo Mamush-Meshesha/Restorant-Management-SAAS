@@ -2,17 +2,18 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Box, Card, CardContent, Typography, Stack, useTheme,
   TextField, InputAdornment, Button, IconButton, alpha, Chip, Menu, MenuItem,
-  Dialog, DialogTitle, DialogContent, DialogActions, Grid, CircularProgress, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, Grid, CircularProgress, Alert, Drawer, Divider
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import {
   IconSearch, IconFilter, IconPlus, IconDownload, IconDots,
-  IconEdit, IconTrash, IconX, IconRefresh,
+  IconEdit, IconTrash, IconX, IconRefresh, IconEye
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import PageContainer from "../../components/container/PageContainer";
 import { toast } from "react-toastify";
+import ImageUpload from "../../components/widgets/ImageUpload";
 
 // --- Props & Data Fetching Config ---
 export interface DataTableConfig {
@@ -78,6 +79,7 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
   // Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<any | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
 
@@ -143,33 +145,47 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
     handleCloseMenu();
   };
 
+  const handleOpenDetails = () => {
+    setEditingRow(menuAnchor.row);
+    setDetailsOpen(true);
+    handleCloseMenu();
+  };
+
   const getDefaultFormSchema = () =>
     config.columns
       .filter((col) => !["id", "actions", "status", "created_at", "updated_at"].includes(col.field))
-      .map((col) => ({ field: col.field, label: col.headerName ?? col.field, type: "text", required: false }));
+      .map((col) => ({ field: col.field, label: col.headerName ?? col.field, type: "text", required: false } as NonNullable<DataTableConfig["formSchema"]>[0]));
 
   const formSchema = config.formSchema ?? getDefaultFormSchema();
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Parse numerical types based on schema before sending
+      const parsedValues = { ...formValues };
+      formSchema.forEach((field) => {
+        if (field.type === "number" && parsedValues[field.field] !== undefined) {
+          parsedValues[field.field] = Number(parsedValues[field.field]) as any;
+        }
+      });
+
       if (editingRow) {
         if (config.updateFn) {
-          await config.updateFn(editingRow.id, formValues);
+          await config.updateFn(editingRow.id, parsedValues);
           toast.success(`${config.noun} updated successfully`);
         } else {
           // Local-only update (no API)
-          setData((prev) => prev.map((r) => r.id === editingRow.id ? { ...r, ...formValues } : r));
+          setData((prev) => prev.map((r) => r.id === editingRow.id ? { ...r, ...parsedValues } : r));
           toast.success(`${config.noun} updated`);
         }
       } else {
         if (config.createFn) {
-          const res = await config.createFn(formValues);
-          const newRow = res.data?.data ?? { id: Date.now().toString(), ...formValues };
+          const res = await config.createFn(parsedValues);
+          const newRow = res.data?.data ?? { id: Date.now().toString(), ...parsedValues };
           setData((prev) => [newRow, ...prev]);
           toast.success(`${config.noun} created successfully`);
         } else {
-          setData((prev) => [{ id: Date.now().toString(), ...formValues }, ...prev]);
+          setData((prev) => [{ id: Date.now().toString(), ...parsedValues }, ...prev]);
           toast.success(`${config.noun} added`);
         }
       }
@@ -336,8 +352,8 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
                 disableRowSelectionOnClick
                 sx={{
                   border: "none",
-                  "& .MuiDataGrid-columnHeaders": {
-                    bgcolor: theme.palette.grey[50],
+                  "&  .MuiDataGrid-columnHeaders": {
+                    bgcolor: theme.palette.background.default,
                     borderBottom: `1px solid ${theme.palette.divider}`,
                     borderRadius: 0,
                   },
@@ -382,6 +398,10 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
           },
         }}
       >
+        <MenuItem onClick={handleOpenDetails} sx={{ py: 1.5, px: 2, fontSize: "0.875rem" }}>
+          <IconEye size={16} style={{ marginRight: 12 }} color={theme.palette.text.secondary} />
+          View Details
+        </MenuItem>
         <MenuItem onClick={handleOpenEdit} sx={{ py: 1.5, px: 2, fontSize: "0.875rem" }}>
           <IconEdit size={16} style={{ marginRight: 12 }} color={theme.palette.text.secondary} />
           Edit {config.noun}
@@ -404,6 +424,7 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
         PaperProps={{ sx: { borderRadius: "12px", boxShadow: theme.shadows[24], overflow: "hidden" } }}
       >
         <DialogTitle
+          component="div"
           sx={{ px: 3, py: 2.5, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${theme.palette.divider}` }}
         >
           <Typography variant="h6" fontWeight={700} sx={{ letterSpacing: "-0.01em" }}>
@@ -438,6 +459,12 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
                         <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
                       ))}
                     </TextField>
+                  ) : field.type === "image" ? (
+                    <ImageUpload
+                      label={field.label}
+                      value={formValues[field.field] ?? ""}
+                      onChange={(url) => setFormValues((prev) => ({ ...prev, [field.field]: url }))}
+                    />
                   ) : (
                     <TextField
                       fullWidth
@@ -462,7 +489,7 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
           </Box>
         </DialogContent>
         <DialogActions
-          sx={{ px: 3, py: 2.5, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.grey[50], gap: 1.5 }}
+          sx={{ px: 3, py: 2.5, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.default, gap: 1.5 }}
         >
           <Button
             onClick={() => setDialogOpen(false)}
@@ -502,7 +529,7 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
           </Typography>
         </DialogContent>
         <DialogActions
-          sx={{ px: 3, py: 2, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.grey[50], gap: 1.5 }}
+          sx={{ px: 3, py: 2, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.default, gap: 1.5 }}
         >
           <Button
             onClick={() => setDeleteOpen(false)}
@@ -521,6 +548,69 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Details Drawer */}
+      <Drawer
+        anchor="right"
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        PaperProps={{
+          sx: { width: { xs: "100%", sm: 400 }, p: 0, bgcolor: theme.palette.background.default },
+        }}
+      >
+        {editingRow && (
+          <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+            <Box sx={{ p: 3, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.paper }}>
+              <Typography variant="h6" fontWeight={700}>
+                {config.noun} Details
+              </Typography>
+              <IconButton onClick={() => setDetailsOpen(false)} size="small">
+                <IconX size={20} />
+              </IconButton>
+            </Box>
+            <Box sx={{ p: 3, flex: 1, overflowY: "auto" }}>
+              <Stack spacing={3}>
+                {config.columns
+                  .filter((col) => col.field !== "actions" && col.field !== "id")
+                  .map((col) => {
+                    const val = editingRow[col.field];
+                    const schemaField = formSchema.find(f => f.field === col.field);
+                    const isImage = schemaField?.type === "image" || col.field.includes("image") || col.field.includes("logo");
+                    
+                    return (
+                      <Box key={col.field}>
+                        <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.5px" }}>
+                          {col.headerName || col.field}
+                        </Typography>
+                        <Box sx={{ mt: 0.5 }}>
+                          {isImage && val ? (
+                            <Box
+                              component="img"
+                              src={val.startsWith("http") ? val : `http://localhost:3000${val}`}
+                              alt={col.field}
+                              sx={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}
+                            />
+                          ) : col.field === "status" || col.field === "is_active" || col.field === "is_available" ? (
+                            renderStatusPill({ value: val } as any)
+                          ) : (
+                            <Typography variant="body1" color={val ? "text.primary" : "text.disabled"}>
+                              {val !== null && val !== undefined && val !== "" ? String(val) : "—"}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    );
+                  })}
+              </Stack>
+            </Box>
+            <Box sx={{ p: 3, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.paper }}>
+              <Button fullWidth variant="outlined" onClick={() => setDetailsOpen(false)}>
+                Close
+              </Button>
+            </Box>
+          </Box>
+        )}
+      </Drawer>
     </PageContainer>
   );
 }

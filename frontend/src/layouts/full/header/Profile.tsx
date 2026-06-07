@@ -106,7 +106,7 @@ const Profile = () => {
     {
       icon: IconSettings,
       label: "Settings",
-      action: () => navigate("/settings"),
+      action: () => navigate("/app-settings"),
     },
   ];
 

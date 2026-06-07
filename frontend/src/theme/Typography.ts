@@ -1,4 +1,8 @@
-const typography = {
+export const createTypography = (fontSizeScale: "small" | "medium" | "large" = "medium") => {
+  const scale = fontSizeScale === "small" ? 0.9 : fontSizeScale === "large" ? 1.1 : 1;
+  const rem = (val: number) => `${val * scale}rem`;
+
+  return {
   fontFamily: "'Plus Jakarta Sans', sans-serif;",
   h1: {
     fontWeight: 700,
@@ -42,25 +46,26 @@ const typography = {
     fontWeight: 500,
     letterSpacing: "0.01em",
   },
-  body1: {
-    fontSize: "0.875rem", // 14px is standard for dense enterprise UIs
-    fontWeight: 400,
-    lineHeight: "1.25rem",
-  },
-  body2: {
-    fontSize: "0.8125rem", // 13px for secondary text
-    letterSpacing: "0rem",
-    fontWeight: 400,
-    lineHeight: "1.25rem",
-  },
-  subtitle1: {
-    fontSize: "0.875rem",
-    fontWeight: 500,
-  },
-  subtitle2: {
-    fontSize: "0.8125rem",
-    fontWeight: 500,
-  },
+    body1: {
+      fontSize: rem(0.875), // 14px
+      fontWeight: 400,
+      lineHeight: rem(1.25),
+    },
+    body2: {
+      fontSize: rem(0.8125), // 13px
+      letterSpacing: "0rem",
+      fontWeight: 400,
+      lineHeight: rem(1.25),
+    },
+    subtitle1: {
+      fontSize: rem(0.875),
+      fontWeight: 500,
+    },
+    subtitle2: {
+      fontSize: rem(0.8125),
+      fontWeight: 500,
+    },
+  };
 };
 
-export default typography;
+export default createTypography("medium");

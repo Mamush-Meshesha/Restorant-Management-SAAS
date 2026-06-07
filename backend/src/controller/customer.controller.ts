@@ -5,13 +5,20 @@ import { AuthenticatedRequest } from '../middleware/institute.middleware';
 export const create_customer = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const orgId = req.user?.organizationId || req.user?.instituteId;
-    const { first_name, last_name, phone, email } = req.body;
+    const { name, phone, email } = req.body;
+    let { first_name, last_name } = req.body;
+
+    if (name && !first_name) {
+      const parts = name.trim().split(' ');
+      first_name = parts[0];
+      last_name = parts.slice(1).join(' ') || undefined;
+    }
 
     const customer = await prisma.customer.create({
       data: {
         organization_id: orgId!,
-        first_name,
-        last_name,
+        first_name: first_name || "Unknown",
+        last_name: last_name,
         phone,
         email
       }
@@ -29,6 +36,11 @@ export const get_customers = async (req: AuthenticatedRequest, res: Response, ne
       include: { tier: true }
     });
 
-    res.status(200).json({ data: customers });
+    const formattedCustomers = customers.map(c => ({
+      ...c,
+      name: `${c.first_name} ${c.last_name || ''}`.trim()
+    }));
+
+    res.status(200).json({ data: formattedCustomers });
   } catch (error) { next(error); }
 };

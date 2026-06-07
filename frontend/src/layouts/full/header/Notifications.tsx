@@ -310,13 +310,15 @@ const Notifications = () => {
                   secondary={
                     <>
                       <Typography
+                        component="span"
                         variant="body2"
                         color="text.secondary"
-                        sx={{ fontSize: "0.8rem", mt: 0.5 }}
+                        sx={{ fontSize: "0.8rem", mt: 0.5, display: "block" }}
                       >
                         {notification.message}
                       </Typography>
                       <Typography
+                        component="span"
                         variant="caption"
                         color="text.secondary"
                         sx={{ fontSize: "0.75rem", mt: 0.5, display: "block" }}

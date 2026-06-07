@@ -14,6 +14,17 @@ export const createDiningArea = (
 ): Promise<AxiosResponse<{ message: string; data: DiningArea }>> =>
   api.post("/table/areas", data);
 
+export const updateDiningArea = (
+  id: string,
+  data: Partial<DiningArea>
+): Promise<AxiosResponse<{ message: string; data: DiningArea }>> =>
+  api.put(`/table/areas/${id}`, data);
+
+export const deleteDiningArea = (
+  id: string
+): Promise<AxiosResponse<{ message: string }>> =>
+  api.delete(`/table/areas/${id}`);
+
 // ── Tables ────────────────────────────────────────────────────────────────────
 
 export const getTables = (params?: {
@@ -33,3 +44,14 @@ export const updateTableStatus = (
   status: string
 ): Promise<AxiosResponse<{ message: string; data: Table }>> =>
   api.put(`/table/${id}/status`, { status });
+
+export const updateTable = (
+  id: string,
+  data: Partial<Table>
+): Promise<AxiosResponse<{ message: string; data: Table }>> =>
+  api.put(`/table/${id}`, data);
+
+export const deleteTable = (
+  id: string
+): Promise<AxiosResponse<{ message: string }>> =>
+  api.delete(`/table/${id}`);

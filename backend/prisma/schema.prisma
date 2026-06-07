@@ -164,8 +164,11 @@ model MenuCategory {
   image_url       String?
   display_order   Int     @default(0)
   is_active       Boolean @default(true)
+  parent_id       String?
 
-  items MenuItem[]
+  items           MenuItem[]
+  parentCategory  MenuCategory?  @relation("SubCategories", fields: [parent_id], references: [id])
+  subcategories   MenuCategory[] @relation("SubCategories")
 
   @@map("menu_categories")
 }

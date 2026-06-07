@@ -1,11 +1,13 @@
-import { lazy } from "react";
+import { lazy, useMemo } from "react";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import RequireAuth from "./components/container/RequireAuth";
 import BlankLayout from "./layouts/blank/BlankLayout";
 import FullLayout from "./layouts/full/FullLayout";
-import { baselightTheme } from "./theme/DefaultColors";
+import { createAppTheme } from "./theme/DefaultColors";
+import { useSelector } from "react-redux";
+import type { RootState } from "./redux/store";
 
 // Auth
 const LoginPage = lazy(() => import("./views/authentication/LoginPage"));
@@ -22,8 +24,14 @@ const TablesFloor = lazy(() => import("./views/tables/TablesFloor"));
 const QRGenerator = lazy(() => import("./views/settings/QRGenerator"));
 const MenuViewer = lazy(() => import("./views/public/MenuViewer"));
 
+// New Pages
+const ProfilePage = lazy(() => import("./views/profile/ProfilePage"));
+const AppSettingsPage = lazy(() => import("./views/settings/AppSettingsPage"));
+const MessagesPage = lazy(() => import("./views/messages/MessagesPage"));
+const OrdersPage = lazy(() => import("./views/orders/OrdersPage"));
+
 import {
-  OrdersPage, ReservationsPage, CategoriesPage, MenuItemsPage, RecipesPage,
+  ReservationsPage, DiningAreasPage, TablesPage, KitchenStationsPage, CategoriesPage, MenuItemsPage, RecipesPage,
   CustomersPage, LoyaltyPage, InventoryPage, SuppliersPage, DeliveryPage,
   EmployeesPage, DepartmentsPage, AttendancePage, RevenuePage, ExpensesPage,
   TransactionsPage, BranchesPage, RolesPage, UsersPage, SettingsPage
@@ -32,8 +40,7 @@ import {
 import RequireRole from "./components/container/RequireRole";
 import { MANAGER_ROLES, ADMIN_ROLES, ROLE_DEFAULT_PATHS } from "./config/roles";
 import type { AppRole } from "./config/roles";
-import { useSelector } from "react-redux";
-import type { RootState } from "./redux/store";
+
 
 const RootRedirect = () => {
   const roleName = useSelector((state: RootState) => state.auth.currentUser?.role?.name) as AppRole | undefined;
@@ -43,7 +50,8 @@ const RootRedirect = () => {
 };
 
 function App() {
-  const theme = baselightTheme;
+  const { mode = "light", primaryColor = "espresso", fontSize = "medium" } = useSelector((state: RootState) => state.theme || {});
+  const theme = useMemo(() => createAppTheme(mode, primaryColor, fontSize as any), [mode, primaryColor, fontSize]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -102,13 +110,16 @@ function App() {
               <Route path="/delivery" element={<DeliveryPage />} />
             </Route>
             
-            {/* HR - Admin & Branch Manager */}
+            {/* Admin & Branch Manager */}
             <Route element={<RequireRole allowedRoles={[...ADMIN_ROLES, "BRANCH_MANAGER"]} />}>
               <Route path="/employees" element={<EmployeesPage />} />
               <Route path="/departments" element={<DepartmentsPage />} />
               <Route path="/attendance" element={<AttendancePage />} />
+              <Route path="/dining-areas" element={<DiningAreasPage />} />
+              <Route path="/tables-manage" element={<TablesPage />} />
+              <Route path="/kitchen-stations" element={<KitchenStationsPage />} />
             </Route>
-            
+
             {/* Admin Only */}
             <Route element={<RequireRole allowedRoles={[...ADMIN_ROLES, "BRANCH_MANAGER"]} />}>
               <Route path="/qr-codes" element={<QRGenerator />} />
@@ -119,6 +130,11 @@ function App() {
               <Route path="/users" element={<UsersPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
+
+            {/* Profile, Messages, App Settings — available to all authenticated users */}
+            <Route path="/my-profile" element={<ProfilePage />} />
+            <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/app-settings" element={<AppSettingsPage />} />
 
             {/* Fallback */}
             <Route path="*" element={<RootRedirect />} />

@@ -49,6 +49,12 @@ app.use(express.urlencoded({ limit: "5mb", extended: true }));
 // Middleware
 app.use(validator());
 app.use("/_resources", serveStatic(path.join(__dirname, "..", "_resources")));
+// Set cross-origin header so frontend on a different port can load uploaded images
+app.use("/uploads", (req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  next();
+}, serveStatic(path.join(__dirname, "..", "public", "uploads")));
 
 // Setup Swagger for API documentation
 setupSwagger(app);

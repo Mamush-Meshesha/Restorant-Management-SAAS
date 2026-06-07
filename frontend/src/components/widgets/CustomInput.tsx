@@ -550,7 +550,7 @@ export const FormRadioGroup = <T extends FieldValues,>({
         return (
           <>
             <RadioGroup
-              onValueChange={(val) => {
+              onValueChange={(val: any) => {
                 field.onChange(val);
               }}
               value={value}

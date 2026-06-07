@@ -7,11 +7,13 @@ import {
 import storage from "redux-persist/lib/storage"; // defaults to localStorage for web
 import authSlice from "./slices/authSlice";
 import restaurantSlice from "./slices/restaurantSlice";
+import themeSlice from "./slices/themeSlice";
 
 // Define RootState type based on combined reducer
 const rootReducer = combineReducers({
   auth: authSlice,
   restaurant: restaurantSlice,
+  theme: themeSlice,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;
@@ -20,7 +22,7 @@ export type RootState = ReturnType<typeof rootReducer>;
 const persistConfig: PersistConfig<RootState> = {
   key: "root",
   storage,
-  whitelist: ["auth"],
+  whitelist: ["auth", "theme"],
 };
 
 // Wrap root reducer with persist reducer

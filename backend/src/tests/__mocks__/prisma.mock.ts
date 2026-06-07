@@ -1,10 +1,3 @@
-/**
- * Prisma mock — replaces the real PrismaClient with jest.fn() stubs so
- * unit tests never touch the database.
- *
- * Usage: jest.mock('../../lib/prisma') at the top of any test file.
- * Then you can do: (prisma.user.findUnique as jest.Mock).mockResolvedValue(...)
- */
 
 const mockPrismaClient: any = {
   user: {
@@ -16,6 +9,7 @@ const mockPrismaClient: any = {
     count:      jest.fn(),
   },
   role: {
+    findFirst:  jest.fn(),
     findUnique: jest.fn(),
     findMany:   jest.fn(),
     create:     jest.fn(),
@@ -23,6 +17,7 @@ const mockPrismaClient: any = {
     delete:     jest.fn(),
   },
   organization: {
+    findFirst:  jest.fn(),
     findUnique: jest.fn(),
     findMany:   jest.fn(),
     create:     jest.fn(),
@@ -55,6 +50,7 @@ const mockPrismaClient: any = {
     findUnique: jest.fn(),
     create:     jest.fn(),
     update:     jest.fn(),
+    aggregate:  jest.fn(),
   },
   subscription: {
     findUnique: jest.fn(),
@@ -142,6 +138,58 @@ const mockPrismaClient: any = {
   },
   orderItem: {
     update:     jest.fn(),
+  },
+  inventoryItem: {
+    findMany:   jest.fn(),
+    findUnique: jest.fn(),
+    create:     jest.fn(),
+    update:     jest.fn(),
+    delete:     jest.fn(),
+  },
+  stockAdjustment: {
+    create: jest.fn(),
+  },
+  wasteLog: {
+    create: jest.fn(),
+  },
+  recipe: {
+    findMany:   jest.fn(),
+    findUnique: jest.fn(),
+    create:     jest.fn(),
+  },
+  supplier: {
+    findMany:   jest.fn(),
+    findUnique: jest.fn(),
+    create:     jest.fn(),
+    update:     jest.fn(),
+  },
+  purchaseOrder: {
+    findMany:   jest.fn(),
+    findUnique: jest.fn(),
+    create:     jest.fn(),
+    update:     jest.fn(),
+  },
+  bill: {
+    findMany:   jest.fn(),
+    findUnique: jest.fn(),
+    create:     jest.fn(),
+    update:     jest.fn(),
+  },
+  expense: {
+    findMany:   jest.fn(),
+    create:     jest.fn(),
+    aggregate:  jest.fn(),
+  },
+  revenueReport: {
+    findMany:   jest.fn(),
+  },
+  transaction: {
+    create: jest.fn(),
+  },
+  fiscalYear: {
+    findFirst:  jest.fn(),
+    findUnique: jest.fn(),
+    create:     jest.fn(),
   },
   $connect:    jest.fn().mockResolvedValue(undefined),
   $disconnect: jest.fn().mockResolvedValue(undefined),

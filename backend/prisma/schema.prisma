@@ -1,0 +1,960 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------
+// CORE & TENANT MODELS
+// ---------------------------------------------------------
+
+model Organization {
+  id         String   @id @default(uuid())
+  name       String
+  logo       String?
+  address    String?
+  phone      String?
+  email      String?
+  website    String?
+  tax_id     String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  is_active  Boolean  @default(true)
+
+  branches    Branch[]
+  fiscalYears FiscalYear[]
+  users       User[]
+  roles       Role[]
+  auditLogs   AuditLog[]
+
+  @@map("organizations")
+}
+
+model Branch {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  code            String?
+  address         String?
+  phone           String?
+  email           String?
+  latitude        Float?
+  longitude       Float?
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  users           User[]
+  diningAreas     DiningArea[]
+  orders          Order[]
+  inventoryItems  InventoryItem[]
+  expenses        Expense[]
+  menuQRCodes     MenuQRCode[]
+  staffAttendance StaffAttendance[]
+  taxConfigs      TaxConfig[]
+  revenueReports  RevenueReport[]
+  kitchenStations KitchenStation[]
+  tables          Table[]
+
+  @@map("branches")
+}
+
+model FiscalYear {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  start_date      DateTime
+  end_date        DateTime
+  is_current      Boolean  @default(false)
+  created_at      DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@map("fiscal_years")
+}
+
+// ---------------------------------------------------------
+// AUTHENTICATION & AUTHORIZATION
+// ---------------------------------------------------------
+
+model User {
+  id              String    @id @default(uuid())
+  organization_id String
+  branch_id       String?
+  role_id         String
+  username        String    @unique
+  email           String    @unique
+  password_hash   String
+  first_name      String?
+  last_name       String?
+  is_active       Boolean   @default(true)
+  last_login      DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+  branch       Branch?      @relation(fields: [branch_id], references: [id])
+  role         Role         @relation(fields: [role_id], references: [id])
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  description     String?
+  created_at      DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+  users        User[]
+  permissions  Permission[]
+
+  @@unique([organization_id, name])
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid())
+  role_id     String
+  feature_key String // e.g., 'MENU_ITEMS', 'ORDERS'
+  can_create  Boolean @default(false)
+  can_read    Boolean @default(false)
+  can_update  Boolean @default(false)
+  can_delete  Boolean @default(false)
+
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([role_id, feature_key])
+  @@map("permissions")
+}
+
+model AuditLog {
+  id              String   @id @default(uuid())
+  organization_id String
+  user_id         String?
+  action          String
+  entity_type     String
+  entity_id       String?
+  details         Json?
+  ip_address      String?
+  created_at      DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+  user         User?        @relation(fields: [user_id], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------
+// MENU & RECIPE MODELS
+// ---------------------------------------------------------
+
+model MenuCategory {
+  id              String  @id @default(uuid())
+  organization_id String
+  name            String
+  description     String?
+  image_url       String?
+  display_order   Int     @default(0)
+  is_active       Boolean @default(true)
+
+  items MenuItem[]
+
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id               String   @id @default(uuid())
+  category_id      String
+  name             String
+  description      String?
+  base_price       Float
+  image_url        String?
+  is_vegetarian    Boolean  @default(false)
+  is_vegan         Boolean  @default(false)
+  is_gluten_free   Boolean  @default(false)
+  allergens        String[]
+  calories         Int?
+  preparation_time Int? // in minutes
+  is_available     Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  category   MenuCategory           @relation(fields: [category_id], references: [id])
+  variants   MenuItemVariant[]
+  addons     MenuItemAddon[]
+  orderItems OrderItem[]
+  recipes    Recipe[]
+  schedules  AvailabilitySchedule[]
+
+  @@map("menu_items")
+}
+
+model MenuItemVariant {
+  id               String  @id @default(uuid())
+  menu_item_id     String
+  name             String // e.g., Small, Large
+  price_adjustment Float // Difference from base_price (e.g., +2.00)
+  is_active        Boolean @default(true)
+
+  menuItem   MenuItem    @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@map("menu_item_variants")
+}
+
+model MenuItemAddon {
+  id           String  @id @default(uuid())
+  menu_item_id String
+  name         String
+  price        Float
+  is_active    Boolean @default(true)
+
+  menuItem        MenuItem         @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
+  orderItemAddons OrderItemAddon[]
+
+  @@map("menu_item_addons")
+}
+
+model ComboMeal {
+  id              String  @id @default(uuid())
+  organization_id String
+  name            String
+  description     String?
+  price           Float
+  is_active       Boolean @default(true)
+
+  @@map("combo_meals")
+}
+
+model Recipe {
+  id           String  @id @default(uuid())
+  menu_item_id String
+  instructions String?
+  prep_time    Int? // minutes
+  cook_time    Int? // minutes
+
+  menuItem    MenuItem           @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id                String @id @default(uuid())
+  recipe_id         String
+  inventory_item_id String
+  quantity          Float
+  unit              String
+
+  recipe        Recipe        @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventory_item_id], references: [id])
+
+  @@map("recipe_ingredients")
+}
+
+model AvailabilitySchedule {
+  id           String @id @default(uuid())
+  menu_item_id String
+  day_of_week  Int // 0=Sunday, 1=Monday...
+  start_time   String // "09:00"
+  end_time     String // "11:00"
+
+  menuItem MenuItem @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
+
+  @@map("availability_schedules")
+}
+
+// ---------------------------------------------------------
+// FLOOR & TABLE MODELS
+// ---------------------------------------------------------
+
+model DiningArea {
+  id          String  @id @default(uuid())
+  branch_id   String
+  name        String // e.g., "Main Floor", "Patio"
+  description String?
+  is_active   Boolean @default(true)
+
+  branch      Branch       @relation(fields: [branch_id], references: [id])
+  tableGroups TableGroup[]
+  tables      Table[]
+
+  @@map("dining_areas")
+}
+
+model TableGroup {
+  id             String @id @default(uuid())
+  dining_area_id String
+  name           String // e.g., "Window Seats", "Bar Area"
+
+  diningArea DiningArea @relation(fields: [dining_area_id], references: [id], onDelete: Cascade)
+  tables     Table[]
+
+  @@map("table_groups")
+}
+
+model TableType {
+  id              String @id @default(uuid())
+  organization_id String
+  name            String // e.g., "Booth", "High Top", "Standard"
+
+  tables Table[]
+
+  @@map("table_types")
+}
+
+model Table {
+  id             String  @id @default(uuid())
+  branch_id      String
+  dining_area_id String
+  table_group_id String?
+  table_type_id  String?
+  name           String // e.g., "T-12"
+  capacity       Int     @default(2)
+  status         String  @default("AVAILABLE") // AVAILABLE, OCCUPIED, RESERVED, DIRTY
+  x_pos          Float? // For floor plan UI
+  y_pos          Float? // For floor plan UI
+
+  branch     Branch      @relation(fields: [branch_id], references: [id])
+  diningArea DiningArea  @relation(fields: [dining_area_id], references: [id])
+  tableGroup TableGroup? @relation(fields: [table_group_id], references: [id])
+  tableType  TableType?  @relation(fields: [table_type_id], references: [id])
+
+  orders       Order[]
+  reservations Reservation[]
+  menuQRCodes  MenuQRCode[]
+
+  @@map("tables")
+}
+
+model Reservation {
+  id               String   @id @default(uuid())
+  table_id         String
+  customer_id      String?
+  customer_name    String
+  customer_phone   String
+  reservation_time DateTime
+  guest_count      Int
+  status           String   @default("PENDING") // PENDING, CONFIRMED, SEATED, CANCELLED
+  special_requests String?
+  created_at       DateTime @default(now())
+
+  table    Table     @relation(fields: [table_id], references: [id])
+  customer Customer? @relation(fields: [customer_id], references: [id])
+
+  @@map("reservations")
+}
+
+model Waitlist {
+  id             String   @id @default(uuid())
+  branch_id      String
+  customer_name  String
+  customer_phone String
+  guest_count    Int
+  quoted_time    Int? // estimated wait time in minutes
+  status         String   @default("WAITING") // WAITING, NOTIFIED, SEATED, LEFT
+  created_at     DateTime @default(now())
+
+  @@map("waitlists")
+}
+
+// ---------------------------------------------------------
+// ORDER & POS MODELS
+// ---------------------------------------------------------
+
+model Order {
+  id             String   @id @default(uuid())
+  branch_id      String
+  table_id       String? // Null for takeaway/delivery
+  customer_id    String?
+  waiter_id      String?
+  order_type     String   @default("DINE_IN") // DINE_IN, TAKEAWAY, DELIVERY
+  status         String   @default("OPEN") // OPEN, IN_PROGRESS, READY, SERVED, CLOSED, CANCELLED
+  guest_count    Int      @default(1)
+  subtotal       Float    @default(0)
+  tax_total      Float    @default(0)
+  discount_total Float    @default(0)
+  total_amount   Float    @default(0)
+  notes          String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  branch   Branch    @relation(fields: [branch_id], references: [id])
+  table    Table?    @relation(fields: [table_id], references: [id])
+  customer Customer? @relation(fields: [customer_id], references: [id])
+
+  items    OrderItem[]
+  bills    Bill[]
+  delivery DeliveryOrder?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String   @id @default(uuid())
+  order_id     String
+  menu_item_id String
+  variant_id   String?
+  quantity     Int      @default(1)
+  unit_price   Float
+  total_price  Float
+  status       String   @default("PENDING") // PENDING, PREPARING, READY, SERVED
+  notes        String?
+  created_at   DateTime @default(now())
+
+  order    Order            @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  menuItem MenuItem         @relation(fields: [menu_item_id], references: [id])
+  variant  MenuItemVariant? @relation(fields: [variant_id], references: [id])
+
+  addons        OrderItemAddon[]
+  kitchenOrders KitchenOrder[]
+
+  @@map("order_items")
+}
+
+model OrderItemAddon {
+  id            String @id @default(uuid())
+  order_item_id String
+  addon_id      String
+  price         Float
+
+  orderItem OrderItem     @relation(fields: [order_item_id], references: [id], onDelete: Cascade)
+  addon     MenuItemAddon @relation(fields: [addon_id], references: [id])
+
+  @@map("order_item_addons")
+}
+
+model Bill {
+  id              String   @id @default(uuid())
+  order_id        String
+  bill_number     String   @unique
+  subtotal        Float
+  tax_amount      Float
+  discount_amount Float
+  service_charge  Float    @default(0)
+  total_amount    Float
+  status          String   @default("UNPAID") // UNPAID, PARTIAL, PAID
+  created_at      DateTime @default(now())
+
+  order          Order           @relation(fields: [order_id], references: [id])
+  transactions   Transaction[]
+  paymentQRCodes PaymentQRCode[]
+
+  @@map("bills")
+}
+
+model Transaction {
+  id             String   @id @default(uuid())
+  bill_id        String
+  payment_method String // CASH, CARD, MOBILE, QR
+  amount         Float
+  reference_no   String?
+  status         String   @default("COMPLETED") // PENDING, COMPLETED, FAILED, REFUNDED
+  created_at     DateTime @default(now())
+
+  bill Bill @relation(fields: [bill_id], references: [id])
+
+  @@map("transactions")
+}
+
+model Discount {
+  id              String  @id @default(uuid())
+  organization_id String
+  name            String
+  type            String // PERCENTAGE, FIXED
+  value           Float
+  is_active       Boolean @default(true)
+
+  @@map("discounts")
+}
+
+model Promotion {
+  id              String   @id @default(uuid())
+  organization_id String
+  name            String
+  description     String?
+  start_date      DateTime
+  end_date        DateTime
+  is_active       Boolean  @default(true)
+
+  @@map("promotions")
+}
+
+// ---------------------------------------------------------
+// KITCHEN MODELS
+// ---------------------------------------------------------
+
+model KitchenStation {
+  id        String  @id @default(uuid())
+  branch_id String
+  name      String // e.g., "Grill", "Salad", "Drinks"
+  is_active Boolean @default(true)
+
+  branch Branch         @relation(fields: [branch_id], references: [id])
+  orders KitchenOrder[]
+
+  @@map("kitchen_stations")
+}
+
+model KitchenOrder {
+  id            String    @id @default(uuid())
+  station_id    String
+  order_item_id String
+  status        String    @default("PENDING") // PENDING, PREPARING, READY
+  started_at    DateTime?
+  completed_at  DateTime?
+
+  station   KitchenStation @relation(fields: [station_id], references: [id])
+  orderItem OrderItem      @relation(fields: [order_item_id], references: [id])
+  timers    PrepTimer[]
+
+  @@map("kitchen_orders")
+}
+
+model PrepTimer {
+  id               String   @id @default(uuid())
+  kitchen_order_id String
+  duration_mins    Int
+  started_at       DateTime
+  expires_at       DateTime
+
+  kitchenOrder KitchenOrder @relation(fields: [kitchen_order_id], references: [id])
+
+  @@map("prep_timers")
+}
+
+// ---------------------------------------------------------
+// INVENTORY & PROCUREMENT
+// ---------------------------------------------------------
+
+model InventoryItem {
+  id            String  @id @default(uuid())
+  branch_id     String
+  name          String
+  sku           String?
+  category      String // MEAT, VEG, DAIRY, BEVERAGE
+  unit          String // KG, LITER, PIECE
+  current_stock Float   @default(0)
+  minimum_stock Float   @default(0)
+  cost_per_unit Float   @default(0)
+  is_active     Boolean @default(true)
+
+  branch            Branch              @relation(fields: [branch_id], references: [id])
+  movements         StockMovement[]
+  adjustments       StockAdjustment[]
+  recipeIngredients RecipeIngredient[]
+  poItems           PurchaseOrderItem[]
+
+  @@map("inventory_items")
+}
+
+model StockMovement {
+  id         String   @id @default(uuid())
+  item_id    String
+  type       String // IN, OUT
+  quantity   Float
+  reference  String? // PO number, Recipe usage
+  created_at DateTime @default(now())
+
+  item InventoryItem @relation(fields: [item_id], references: [id])
+
+  @@map("stock_movements")
+}
+
+model StockAdjustment {
+  id               String   @id @default(uuid())
+  item_id          String
+  quantity_changed Float // + or -
+  reason           String // DAMAGE, SPOILAGE, COUNT_CORRECTION
+  created_at       DateTime @default(now())
+
+  item InventoryItem @relation(fields: [item_id], references: [id])
+
+  @@map("stock_adjustments")
+}
+
+model WasteLog {
+  id         String   @id @default(uuid())
+  branch_id  String
+  item_name  String
+  quantity   Float
+  cost_loss  Float
+  reason     String
+  created_at DateTime @default(now())
+
+  @@map("waste_logs")
+}
+
+model Supplier {
+  id              String  @id @default(uuid())
+  organization_id String
+  name            String
+  contact_person  String?
+  phone           String?
+  email           String?
+  address         String?
+  is_active       Boolean @default(true)
+
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id            String    @id @default(uuid())
+  supplier_id   String
+  po_number     String    @unique
+  status        String    @default("DRAFT") // DRAFT, SENT, PARTIAL, DELIVERED, CANCELLED
+  total_amount  Float     @default(0)
+  expected_date DateTime?
+  created_at    DateTime  @default(now())
+
+  supplier      Supplier            @relation(fields: [supplier_id], references: [id])
+  items         PurchaseOrderItem[]
+  receivingLogs GoodsReceiving[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id                String @id @default(uuid())
+  po_id             String
+  inventory_item_id String
+  quantity          Float
+  unit_price        Float
+  total_price       Float
+
+  po   PurchaseOrder @relation(fields: [po_id], references: [id], onDelete: Cascade)
+  item InventoryItem @relation(fields: [inventory_item_id], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+model GoodsReceiving {
+  id            String   @id @default(uuid())
+  po_id         String
+  received_date DateTime @default(now())
+  received_by   String
+  notes         String?
+
+  po PurchaseOrder @relation(fields: [po_id], references: [id])
+
+  @@map("goods_receiving")
+}
+
+// ---------------------------------------------------------
+// CUSTOMER & LOYALTY
+// ---------------------------------------------------------
+
+model Customer {
+  id              String   @id @default(uuid())
+  organization_id String
+  tier_id         String?
+  first_name      String
+  last_name       String?
+  phone           String   @unique
+  email           String?
+  loyalty_points  Int      @default(0)
+  created_at      DateTime @default(now())
+
+  tier           CustomerTier?        @relation(fields: [tier_id], references: [id])
+  orders         Order[]
+  reservations   Reservation[]
+  loyaltyHistory LoyaltyTransaction[]
+
+  @@map("customers")
+}
+
+model CustomerTier {
+  id              String @id @default(uuid())
+  organization_id String
+  name            String // Silver, Gold, Platinum
+  min_points      Int    @default(0)
+  discount_rate   Float  @default(0)
+
+  customers Customer[]
+
+  @@map("customer_tiers")
+}
+
+model LoyaltyProgram {
+  id                  String  @id @default(uuid())
+  organization_id     String
+  points_per_currency Float   @default(1) // 1 point per 10 ETB etc
+  min_redemption      Int     @default(100)
+  is_active           Boolean @default(true)
+
+  @@map("loyalty_programs")
+}
+
+model LoyaltyTransaction {
+  id          String   @id @default(uuid())
+  customer_id String
+  points      Int // + for earn, - for redeem
+  type        String // EARN, REDEEM
+  reference   String? // Order ID
+  created_at  DateTime @default(now())
+
+  customer Customer @relation(fields: [customer_id], references: [id])
+
+  @@map("loyalty_transactions")
+}
+
+// ---------------------------------------------------------
+// EMPLOYEE & HR
+// ---------------------------------------------------------
+
+model Department {
+  id              String  @id @default(uuid())
+  organization_id String
+  name            String // FOH, BOH, Admin
+  is_active       Boolean @default(true)
+
+  employees Employee[]
+
+  @@map("departments")
+}
+
+model Position {
+  id              String  @id @default(uuid())
+  organization_id String
+  name            String // Waiter, Chef, Manager
+  base_salary     Float?
+  is_active       Boolean @default(true)
+
+  employees Employee[]
+
+  @@map("positions")
+}
+
+model EmploymentType {
+  id              String @id @default(uuid())
+  organization_id String
+  name            String // Full-Time, Part-Time, Contract
+
+  employees Employee[]
+
+  @@map("employment_types")
+}
+
+model Employee {
+  id                 String   @id @default(uuid())
+  organization_id    String
+  department_id      String
+  position_id        String
+  employment_type_id String
+  first_name         String
+  last_name          String
+  phone              String?
+  email              String?
+  hire_date          DateTime
+  is_active          Boolean  @default(true)
+  created_at         DateTime @default(now())
+
+  department     Department     @relation(fields: [department_id], references: [id])
+  position       Position       @relation(fields: [position_id], references: [id])
+  employmentType EmploymentType @relation(fields: [employment_type_id], references: [id])
+
+  shifts      ShiftAssignment[]
+  attendances StaffAttendance[]
+
+  @@map("employees")
+}
+
+model Shift {
+  id              String @id @default(uuid())
+  organization_id String
+  name            String // Morning, Evening
+  start_time      String // "08:00"
+  end_time        String // "16:00"
+
+  assignments ShiftAssignment[]
+
+  @@map("shifts")
+}
+
+model ShiftAssignment {
+  id          String   @id @default(uuid())
+  employee_id String
+  shift_id    String
+  date        DateTime
+
+  employee Employee @relation(fields: [employee_id], references: [id])
+  shift    Shift    @relation(fields: [shift_id], references: [id])
+
+  @@map("shift_assignments")
+}
+
+model StaffAttendance {
+  id          String    @id @default(uuid())
+  employee_id String
+  branch_id   String
+  date        DateTime
+  clock_in    DateTime?
+  clock_out   DateTime?
+  status      String    @default("PRESENT") // PRESENT, LATE, ABSENT
+
+  employee Employee @relation(fields: [employee_id], references: [id])
+  branch   Branch   @relation(fields: [branch_id], references: [id])
+
+  @@map("staff_attendances")
+}
+
+// ---------------------------------------------------------
+// DELIVERY MODELS
+// ---------------------------------------------------------
+
+model DeliveryZone {
+  id               String  @id @default(uuid())
+  branch_id        String
+  name             String
+  radius_km        Float
+  delivery_fee     Float
+  min_order_amount Float   @default(0)
+  is_active        Boolean @default(true)
+
+  @@map("delivery_zones")
+}
+
+model Driver {
+  id              String  @id @default(uuid())
+  organization_id String
+  name            String
+  phone           String
+  vehicle_type    String?
+  vehicle_plate   String?
+  is_active       Boolean @default(true)
+
+  deliveries DeliveryOrder[]
+
+  @@map("drivers")
+}
+
+model DeliveryOrder {
+  id               String    @id @default(uuid())
+  order_id         String    @unique
+  driver_id        String?
+  customer_address String
+  delivery_fee     Float     @default(0)
+  status           String    @default("PENDING") // PENDING, ASSIGNED, OUT_FOR_DELIVERY, DELIVERED
+  estimated_time   DateTime?
+  delivered_at     DateTime?
+
+  order  Order   @relation(fields: [order_id], references: [id])
+  driver Driver? @relation(fields: [driver_id], references: [id])
+
+  @@map("delivery_orders")
+}
+
+// ---------------------------------------------------------
+// FINANCIAL MODELS
+// ---------------------------------------------------------
+
+model ExpenseCategory {
+  id              String @id @default(uuid())
+  organization_id String
+  name            String // Rent, Utilities, Supplies
+
+  expenses Expense[]
+
+  @@map("expense_categories")
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  branch_id   String
+  category_id String
+  amount      Float
+  date        DateTime
+  reference   String?
+  notes       String?
+
+  branch   Branch          @relation(fields: [branch_id], references: [id])
+  category ExpenseCategory @relation(fields: [category_id], references: [id])
+
+  @@map("expenses")
+}
+
+model TaxConfig {
+  id              String  @id @default(uuid())
+  branch_id       String
+  name            String // VAT, Service Tax
+  rate_percentage Float
+  is_active       Boolean @default(true)
+
+  branch Branch @relation(fields: [branch_id], references: [id])
+
+  @@map("tax_configs")
+}
+
+model RevenueReport {
+  id             String   @id @default(uuid())
+  branch_id      String
+  date           DateTime
+  total_sales    Float
+  total_tax      Float
+  total_discount Float
+  net_revenue    Float
+  order_count    Int
+
+  branch Branch @relation(fields: [branch_id], references: [id])
+
+  @@unique([branch_id, date])
+  @@map("revenue_reports")
+}
+
+// ---------------------------------------------------------
+// QR CODE MODELS
+// ---------------------------------------------------------
+
+model MenuQRCode {
+  id         String   @id @default(uuid())
+  branch_id  String
+  table_id   String? // Optional: link directly to a table
+  token      String   @unique // The unique slug in the QR URL
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  branch   Branch      @relation(fields: [branch_id], references: [id])
+  table    Table?      @relation(fields: [table_id], references: [id])
+  scanLogs QRScanLog[]
+
+  @@map("menu_qr_codes")
+}
+
+model PaymentQRCode {
+  id         String   @id @default(uuid())
+  bill_id    String
+  token      String   @unique
+  amount     Float
+  expires_at DateTime
+  is_paid    Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  bill     Bill        @relation(fields: [bill_id], references: [id])
+  scanLogs QRScanLog[]
+
+  @@map("payment_qr_codes")
+}
+
+model QRScanLog {
+  id                 String   @id @default(uuid())
+  menu_qr_code_id    String?
+  payment_qr_code_id String?
+  device_type        String? // Mobile, Tablet, Desktop
+  ip_address         String?
+  scanned_at         DateTime @default(now())
+
+  menuQRCode    MenuQRCode?    @relation(fields: [menu_qr_code_id], references: [id])
+  paymentQRCode PaymentQRCode? @relation(fields: [payment_qr_code_id], references: [id])
+
+  @@map("qr_scan_logs")
+}

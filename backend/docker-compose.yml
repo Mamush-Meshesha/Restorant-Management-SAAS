@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  sm-system-backend:
+    container_name: sms-be
+    image: natty98282/sms-be:${IMAGE_TAG}
+    ports:
+      - "3000:10001"
+    environment:
+      - DATABASE_URL=postgresql://sm_owner:npg_OkYIawQKX0e3@ep-jolly-cherry-a4jma35y-pooler.us-east-1.aws.neon.tech/sm?sslmode=require&channel_binding=require
+      - PORT=10001

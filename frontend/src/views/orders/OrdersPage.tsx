@@ -194,7 +194,7 @@ function OrderCard({ order, onClick }: { order: Order; onClick: () => void }) {
               <Stack direction="row" spacing={0.5} alignItems="center" mt={0.25}>
                 {TYPE_ICON[order.order_type]}
                 <Typography variant="caption" color="text.secondary">
-                  {order.table?.name ?? order.order_type.replace("_", " ")}
+                  {order.table?.table_number ?? order.order_type.replace("_", " ")}
                 </Typography>
               </Stack>
             </Box>
@@ -274,7 +274,7 @@ export default function OrdersPage() {
     const q = search.toLowerCase();
     return (
       o.order_number?.toLowerCase().includes(q) ||
-      o.table?.name?.toLowerCase().includes(q) ||
+      o.table?.table_number?.toLowerCase().includes(q) ||
       o.order_type?.toLowerCase().includes(q)
     );
   });

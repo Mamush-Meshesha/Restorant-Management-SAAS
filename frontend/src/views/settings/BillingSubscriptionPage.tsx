@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Box, Typography, Grid, Card, CardContent, Stack, alpha, useTheme,
-  Button, Divider, LinearProgress, Chip, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, IconButton, Dialog, DialogTitle,
-  DialogContent, DialogActions, Tooltip
+  Button, LinearProgress, Chip, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, IconButton, Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogActions
 } from "@mui/material";
 import {
-  IconCrown, IconCheck, IconX, IconCreditCard, IconReceipt,
-  IconChartPie, IconDownload, IconArrowRight
+  IconChartPie, IconDownload, IconReceipt, IconCheck
 } from "@tabler/icons-react";
 import PageContainer from "../../components/container/PageContainer";
-import { motion } from "framer-motion";
 import { getBillingSubscription, getBillingPlans, getBillingInvoices, upgradeSubscription, downloadInvoice } from "../../api/_billing";
 
 // ─── TYPES ──────────────────────────────────────────────────────────────────
@@ -21,6 +19,9 @@ interface SubscriptionPlan {
   price: number;
   billing_cycle: string;
   features: string[];
+  max_branches: number;
+  max_users: number;
+  max_storage_mb: number;
 }
 
 interface SubscriptionUsage {
@@ -133,7 +134,7 @@ export default function BillingSubscriptionPage() {
 
       <Grid container spacing={3}>
         {/* ─── CURRENT SUBSCRIPTION & COUNTDOWN ─── */}
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Card sx={{ height: "100%", bgcolor: alpha(theme.palette.primary.main, 0.02), border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` }}>
             <CardContent sx={{ p: 4 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={4}>
@@ -179,7 +180,7 @@ export default function BillingSubscriptionPage() {
         </Grid>
 
         {/* ─── USAGE ANALYTICS ─── */}
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Card sx={{ height: "100%" }}>
             <CardContent sx={{ p: 4 }}>
               <Typography variant="h6" fontWeight={700} mb={3} display="flex" alignItems="center" gap={1}>
@@ -202,11 +203,11 @@ export default function BillingSubscriptionPage() {
         </Grid>
 
         {/* ─── PLAN COMPARISON ─── */}
-        <Grid item xs={12} id="plans-section" mt={4}>
+        <Grid size={12} id="plans-section" mt={4}>
           <Typography variant="h5" fontWeight={800} mb={3}>Available Plans</Typography>
           <Grid container spacing={3}>
             {plans.map((p) => (
-              <Grid item xs={12} sm={6} md={3} key={p.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={p.id}>
                 <Card 
                   sx={{ 
                     height: "100%", 

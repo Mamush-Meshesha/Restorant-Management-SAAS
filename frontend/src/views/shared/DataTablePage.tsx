@@ -461,7 +461,6 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
                     </TextField>
                   ) : field.type === "image" ? (
                     <ImageUpload
-                      label={field.label}
                       value={formValues[field.field] ?? ""}
                       onChange={(url) => setFormValues((prev) => ({ ...prev, [field.field]: url }))}
                     />

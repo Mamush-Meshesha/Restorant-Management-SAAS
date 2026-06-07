@@ -1,14 +1,13 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Box, Card, CardContent, Typography, Stack, Divider,
   Switch, FormControlLabel, Button, Grid, Paper, Chip, alpha,
-  Select, MenuItem, FormControl, InputLabel, Slider,
   ToggleButtonGroup, ToggleButton, Tooltip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
-  IconMoon, IconSun, IconPalette, IconBell, IconBellOff,
-  IconDeviceDesktop, IconTextSize, IconCheck, IconLayout,
+  IconMoon, IconSun, IconPalette, IconBell,
+  IconDeviceDesktop, IconCheck, IconLayout,
 } from "@tabler/icons-react";
 import { useAppDispatch, useAppSelector } from "@/hooks/auth";
 import {
@@ -98,7 +97,7 @@ const AppSettingsPage = () => {
               { label: "Light Mode", value: "light", icon: IconSun, desc: "Clean & bright" },
               { label: "Dark Mode", value: "dark", icon: IconMoon, desc: "Easy on the eyes" },
             ].map((opt) => (
-              <Grid item xs={6} key={opt.value}>
+              <Grid size={6} key={opt.value}>
                 <Paper
                   onClick={() => dispatch(toggleThemeMode())}
                   elevation={0}
@@ -252,7 +251,7 @@ const AppSettingsPage = () => {
             { label: "Environment", value: "Development" },
             { label: "Build", value: new Date().toLocaleDateString() },
           ].map((item) => (
-            <Grid item xs={6} key={item.label}>
+            <Grid size={6} key={item.label}>
               <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: alpha(theme.palette.divider, 0.4) }}>
                 <Typography variant="caption" color="text.secondary">{item.label}</Typography>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ fontFamily: "monospace" }}>

@@ -10,24 +10,16 @@ if (!databaseUrl) {
 }
 
 const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
+  log: ['info', 'warn', 'error'],
 });
 
-// Handle connection issues
-prisma.$connect()
-  .then(() => {
-    console.log('Database connected successfully');
-  })
-  .catch((error) => {
-    console.error('Database connection failed:', error);
-  });
+// Connect is handled lazily by Prisma
 
 // Graceful shutdown
 process.on('beforeExit', async () => {
   await prisma.$disconnect();
 });
 
-// Handle process termination
 process.on('SIGINT', async () => {
   await prisma.$disconnect();
   process.exit(0);
@@ -38,4 +30,4 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-export default prisma; 
+export default prisma;

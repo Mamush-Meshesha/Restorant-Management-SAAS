@@ -19,6 +19,7 @@ import supplierRoutes from "./routes/supplier.routes";
 import recipeRoutes from "./routes/recipe.routes";
 import analyticsRoutes from "./routes/analytics.routes";
 import uploadRoutes from "./routes/upload.routes";
+import billingRoutes from "./routes/billing.routes";
 
 export default (app: Application) => {
   app.use("/api/v1/auth", authRoutes);
@@ -41,4 +42,5 @@ export default (app: Application) => {
   app.use("/api/v1/recipe", recipeRoutes);
   app.use("/api/v1/analytics", analyticsRoutes);
   app.use("/api/v1/upload", uploadRoutes);
+  app.use("/api/v1/billing", billingRoutes);
 };

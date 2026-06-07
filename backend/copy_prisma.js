@@ -1,17 +1,28 @@
 const fs = require('fs');
 const path = require('path');
 
-const src1 = path.join(__dirname, 'node_modules', '@prisma', 'client', 'runtime', 'query_compiler_bg.postgresql.wasm-base64.js');
-const dest1 = path.join(__dirname, 'node_modules', '@prisma', 'client', 'runtime', 'query_compiler_fast_bg.postgresql.wasm-base64.js');
+const runtimeDir = path.join(__dirname, 'node_modules', '@prisma', 'client', 'runtime');
 
-const src2 = path.join(__dirname, 'node_modules', '@prisma', 'client', 'runtime', 'query_compiler_bg.postgresql.wasm-base64.mjs');
-const dest2 = path.join(__dirname, 'node_modules', '@prisma', 'client', 'runtime', 'query_compiler_fast_bg.postgresql.wasm-base64.mjs');
+// All known variants that prisma generate needs
+const copies = [
+  // wasm-base64 variants (used at runtime)
+  ['query_compiler_bg.postgresql.wasm-base64.js',  'query_compiler_fast_bg.postgresql.wasm-base64.js'],
+  ['query_compiler_bg.postgresql.wasm-base64.mjs', 'query_compiler_fast_bg.postgresql.wasm-base64.mjs'],
+  // plain .js variant (required by prisma generate during the copy step)
+  ['query_compiler_bg.postgresql.js',              'query_compiler_fast_bg.postgresql.js'],
+];
 
-try {
-  fs.copyFileSync(src1, dest1);
-  console.log('Copied js');
-  fs.copyFileSync(src2, dest2);
-  console.log('Copied mjs');
-} catch (e) {
-  console.error(e);
+let copied = 0;
+for (const [src, dest] of copies) {
+  const srcPath  = path.join(runtimeDir, src);
+  const destPath = path.join(runtimeDir, dest);
+  if (fs.existsSync(srcPath)) {
+    fs.copyFileSync(srcPath, destPath);
+    console.log(`Copied: ${src} → ${dest}`);
+    copied++;
+  } else {
+    console.warn(`Source not found (skipping): ${src}`);
+  }
 }
+
+console.log(`\nDone. ${copied} file(s) copied.`);

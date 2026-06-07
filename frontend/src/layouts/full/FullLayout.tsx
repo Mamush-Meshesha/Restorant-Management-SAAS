@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Outlet } from "react-router";
 import Header from "./header/Header";
 import MSidebar from "./sidebar/Sidebar";
+import GlobalSubscriptionBanner from "../../components/widgets/GlobalSubscriptionBanner";
 
 const MainWrapper = styled("div")(({ theme }) => ({
   display: "flex",
@@ -55,6 +56,7 @@ const FullLayout = () => {
           toggleSidebar={() => setSidebarOpen(!isSidebarOpen)}
           toggleMobileSidebar={() => setMobileSidebarOpen(true)}
         />
+        <GlobalSubscriptionBanner />
         <ContentArea>
           <Outlet />
         </ContentArea>

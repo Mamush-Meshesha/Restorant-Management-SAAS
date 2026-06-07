@@ -27,6 +27,7 @@ const MenuViewer = lazy(() => import("./views/public/MenuViewer"));
 // New Pages
 const ProfilePage = lazy(() => import("./views/profile/ProfilePage"));
 const AppSettingsPage = lazy(() => import("./views/settings/AppSettingsPage"));
+const BillingSubscriptionPage = lazy(() => import("./views/settings/BillingSubscriptionPage"));
 const MessagesPage = lazy(() => import("./views/messages/MessagesPage"));
 const OrdersPage = lazy(() => import("./views/orders/OrdersPage"));
 
@@ -129,6 +130,7 @@ function App() {
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/billing" element={<BillingSubscriptionPage />} />
             </Route>
 
             {/* Profile, Messages, App Settings — available to all authenticated users */}

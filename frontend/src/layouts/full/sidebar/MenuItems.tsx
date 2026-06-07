@@ -21,6 +21,7 @@ import {
   IconSettings,
   IconMotorbike,
   IconStar,
+  IconCreditCard,
 } from "@tabler/icons-react";
 import { uniqueId } from "lodash";
 import type { NavHeaderItemType, NavItemType } from "./NavItem";
@@ -313,6 +314,14 @@ const Menuitems: SidebarMenuItem[] = [
     title: "Settings",
     icon: IconSettings,
     href: "/settings",
+    disabled: false,
+    roles: [...ADMIN_ROLES],
+  },
+  {
+    id: uniqueId(),
+    title: "Billing & Subscription",
+    icon: IconCreditCard,
+    href: "/settings/billing",
     disabled: false,
     roles: [...ADMIN_ROLES],
   },

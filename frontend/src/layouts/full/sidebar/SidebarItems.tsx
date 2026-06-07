@@ -40,19 +40,18 @@ const SidebarItems = () => {
     }).catch(console.error);
   }, []);
 
-  // Filter items based on role
+  // Filter items based on role and inject dynamic categories
   let filteredItems = Menuitems.filter((item) => {
     if (!item.roles || item.roles.length === 0) return true; // Show if no roles specified
     if (!roleName) return false; // Hide if user has no role but item requires one
     return item.roles.includes(roleName);
+  }).map((item) => {
+    // Inject dynamic categories into the "Categories" tab children
+    if (!isNavHeaderItem(item) && item.title === "Categories" && dynamicCategories.length > 0) {
+      return { ...item, children: dynamicCategories };
+    }
+    return item;
   });
-
-  // Inject dynamic categories after the "Menu Items" entry
-  const menuItemsIndex = filteredItems.findIndex(i => !isNavHeaderItem(i) && i.title === "Menu Items");
-  if (menuItemsIndex !== -1 && dynamicCategories.length > 0) {
-    // Insert dynamic categories
-    filteredItems.splice(menuItemsIndex + 1, 0, ...dynamicCategories);
-  }
 
   return (
     <Box sx={{ px: sidebarCompact ? 1 : 3 }}>

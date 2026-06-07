@@ -126,7 +126,7 @@ const NavItem: React.FC<NavItemProps> = ({
       </Tooltip>
       {item.children && !sidebarCompact && (
         <Collapse in={open} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding sx={{ pl: 2 }}>
+          <List component="ul" disablePadding sx={{ pl: 2 }}>
             {item.children.map((child) => (
               <NavItem
                 key={child.id}

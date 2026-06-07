@@ -10,7 +10,7 @@ import { getRevenueReport } from "@/api/_analytics";
 import { getCustomers, createCustomer } from "@/api/_customer";
 import { getReservations, createReservation, updateReservationStatus } from "@/api/_reservations";
 import { getKitchenStations, createKitchenStation, updateKitchenStation, deleteKitchenStation } from "@/api/_kitchenStations";
-import { getDiningAreas, createDiningArea, updateDiningArea, deleteDiningArea, getTables, createTable, updateTable, deleteTable, updateTableStatus } from "@/api/_tables";
+import { getDiningAreas, createDiningArea, updateDiningArea, deleteDiningArea, getTables, createTable, updateTable, deleteTable } from "@/api/_tables";
 
 // Reusable column definitions
 
@@ -252,7 +252,7 @@ export const CategoriesPage = () => {
         title: "Menu Categories",
         description: "Manage menu groupings and subcategories",
         noun: "Category",
-        columns: [,
+        columns: [
           { 
             field: "name", 
             headerName: "Name", 
@@ -317,7 +317,7 @@ export const MenuItemsPage = () => {
         title: "Menu Items",
         description: "All available dishes and drinks",
         noun: "Item",
-        columns: [,
+        columns: [
           nameCol,
           { field: "base_price", headerName: "Price", width: 110, valueFormatter: (v: any) => `$${Number(v).toFixed(2)}` },
           { field: "category_name", headerName: "Category", width: 150 },
@@ -374,7 +374,7 @@ export const CustomersPage = () => (
       title: "Customers",
       description: "Customer directory",
       noun: "Customer",
-      columns: [, nameCol,
+      columns: [nameCol,
         { field: "email", headerName: "Email", flex: 1 },
         { field: "phone", headerName: "Phone", width: 140 },
         actionCol,
@@ -413,7 +413,7 @@ export const InventoryPage = () => (
       title: "Inventory",
       description: "Stock and ingredient management",
       noun: "Item",
-      columns: [, nameCol,
+      columns: [nameCol,
         { field: "unit", headerName: "Unit", width: 100 },
         { field: "current_stock", headerName: "Stock Level", width: 120 },
         { field: "minimum_stock", headerName: "Min. Stock", width: 120 },
@@ -498,7 +498,7 @@ export const EmployeesPage = () => {
         title: "Employees",
         description: "Staff directory",
         noun: "Employee",
-        columns: [,
+        columns: [
           nameCol,
           { field: "email", headerName: "Email", flex: 1 },
           { field: "role_name", headerName: "Role", width: 160 },
@@ -621,7 +621,7 @@ export const BranchesPage = () => (
       title: "Branches",
       description: "Location management",
       noun: "Branch",
-      columns: [, nameCol,
+      columns: [nameCol,
         { field: "code", headerName: "Code", width: 120 },
         { field: "address", headerName: "Address", flex: 1 },
         { field: "phone", headerName: "Phone", width: 140 },
@@ -686,7 +686,7 @@ export const UsersPage = () => {
         title: "Users",
         description: "System accounts",
         noun: "User",
-        columns: [,
+        columns: [
           nameCol,
           { field: "email", headerName: "Email", flex: 1 },
           { field: "username", headerName: "Username", width: 140 },

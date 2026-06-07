@@ -48,7 +48,7 @@ const NavItem: React.FC<NavItemProps> = ({
   const itemIcon = <Icon stroke={1.5} size="1.3rem" />;
   const [open, setOpen] = useState(false);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = () => {
     if (item.children) {
       setOpen(!open);
     } else if (onClick) {

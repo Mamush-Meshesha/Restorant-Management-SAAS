@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
-  Box, Card, CardContent, Typography, Stack, Divider, Avatar,
-  TextField, InputAdornment, IconButton, Chip, List, ListItem,
+  Box, Card, Typography, Stack, Divider, Avatar,
+  TextField, InputAdornment, IconButton, Chip, List,
   ListItemAvatar, ListItemText, ListItemButton, Badge, alpha,
   Paper, Button, Tooltip, CircularProgress,
 } from "@mui/material";
@@ -9,10 +9,8 @@ import { useTheme } from "@mui/material/styles";
 import {
   IconSearch, IconSend, IconDotsVertical, IconPaperclip,
   IconMoodSmile, IconMailbox, IconArrowLeft, IconCirclePlus,
-  IconPoint,
 } from "@tabler/icons-react";
 import { useAppSelector } from "@/hooks/auth";
-import ProfileImg from "@/assets/images/profile/user-1.jpg";
 
 // --- Static demo data (messages live in-app only — no backend endpoint yet) ---
 
@@ -357,7 +355,7 @@ const MessagesPage = () => {
                 "&::-webkit-scrollbar-thumb": { bgcolor: theme.palette.divider, borderRadius: 4 },
               }}
             >
-              {active.messages.map((msg, idx) => {
+              {active.messages.map((msg) => {
                 const isMe = msg.senderId === myId;
                 return (
                   <Box
@@ -461,7 +459,6 @@ const MessagesPage = () => {
             sx={{
               flex: 1,
               borderRadius: 3,
-              display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexDirection: "column",

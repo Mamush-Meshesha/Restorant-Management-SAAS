@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../../redux/store";
 import Menuitems, { type SidebarMenuItem } from "./MenuItems";
 import NavGroup from "./NavGroup/NavGroup";
-import type { NavHeaderItemType } from "./NavItem";
+import type { NavHeaderItemType, NavItemType } from "./NavItem";
 import NavItem from "./NavItem";
 import type { AppRole } from "../../../config/roles";
 import { useState, useEffect } from "react";
@@ -23,7 +23,7 @@ const SidebarItems = () => {
   const roleName = useSelector((state: RootState) => state.auth.currentUser?.role?.name) as AppRole | undefined;
   const sidebarCompact = useSelector((state: RootState) => state.theme?.sidebarCompact ?? false);
 
-  const [dynamicCategories, setDynamicCategories] = useState<SidebarMenuItem[]>([]);
+  const [dynamicCategories, setDynamicCategories] = useState<NavItemType[]>([]);
 
   useEffect(() => {
     getCategories().then(res => {
@@ -51,7 +51,7 @@ const SidebarItems = () => {
       return { ...item, children: dynamicCategories };
     }
     return item;
-  });
+  }) as SidebarMenuItem[];
 
   return (
     <Box sx={{ px: sidebarCompact ? 1 : 3 }}>
@@ -61,10 +61,10 @@ const SidebarItems = () => {
             !sidebarCompact && <NavGroup item={item} key={item.subheader} />
           ) : (
             <NavItem
-              item={item}
-              disabled={item.disabled}
+              item={item as NavItemType}
+              disabled={(item as NavItemType).disabled}
               pathDirect={pathDirect}
-              key={item.id}
+              key={(item as NavItemType).id}
               level={1}
             />
           )

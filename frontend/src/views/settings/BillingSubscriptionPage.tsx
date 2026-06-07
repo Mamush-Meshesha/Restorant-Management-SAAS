@@ -249,7 +249,7 @@ export default function BillingSubscriptionPage() {
         </Grid>
 
         {/* ─── BILLING HISTORY ─── */}
-        <Grid item xs={12} mt={4}>
+        <Grid size={12} mt={4}>
           <Card>
             <CardContent sx={{ p: 0 }}>
               <Box p={3} borderBottom={`1px solid ${theme.palette.divider}`}>
@@ -271,9 +271,9 @@ export default function BillingSubscriptionPage() {
                   <TableBody>
                     {invoices.map((inv) => (
                       <TableRow key={inv.id}>
-                        <TableCell fontWeight={600}>{inv.invoice_number}</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>{inv.invoice_number}</TableCell>
                         <TableCell>{new Date(inv.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell fontWeight={700}>${inv.amount.toFixed(2)}</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>${inv.amount.toFixed(2)}</TableCell>
                         <TableCell>
                           <Chip label={inv.status} size="small" color={inv.status === 'PAID' ? 'success' : 'default'} />
                         </TableCell>

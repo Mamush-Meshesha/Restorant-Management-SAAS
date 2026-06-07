@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, Typography, Button, alpha, useTheme } from "@mui/material";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -25,13 +25,10 @@ export default function GlobalSubscriptionBanner() {
   let message = "";
   let color = theme.palette.warning.main;
   let bg = alpha(theme.palette.warning.main, 0.1);
-  let isLocked = false;
-
   if (sub.status === 'EXPIRED' || daysRemaining <= 0) {
     message = "Your subscription has expired. You are in a read-only grace period.";
     color = theme.palette.error.main;
     bg = alpha(theme.palette.error.main, 0.1);
-    isLocked = true;
   } else if (daysRemaining <= 3) {
     message = `Urgent: Your subscription expires in ${daysRemaining} days.`;
     color = theme.palette.error.main;

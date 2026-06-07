@@ -29,6 +29,7 @@ model Organization {
   users       User[]
   roles       Role[]
   auditLogs   AuditLog[]
+  subscription Subscription?
 
   @@map("organizations")
 }
@@ -960,4 +961,111 @@ model QRScanLog {
   paymentQRCode PaymentQRCode? @relation(fields: [payment_qr_code_id], references: [id])
 
   @@map("qr_scan_logs")
+}
+
+// ---------------------------------------------------------
+// SUBSCRIPTION & BILLING MODELS
+// ---------------------------------------------------------
+
+model SubscriptionPlan {
+  id               String   @id @default(uuid())
+  name             String   // Free, Starter, Professional, Enterprise, Lifetime
+  description      String?
+  billing_cycle    String   // MONTHLY, YEARLY, LIFETIME
+  price            Float
+  is_active        Boolean  @default(true)
+  max_branches     Int      @default(1)
+  max_users        Int      @default(5)
+  max_storage_mb   Int      @default(1024)
+  features         Json?    // Array of feature strings or JSON object
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  subscriptions    Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                   String   @id @default(uuid())
+  organization_id      String   @unique
+  plan_id              String
+  status               String   // ACTIVE, TRIAL, EXPIRED, SUSPENDED, CANCELLED, GRACE_PERIOD, PENDING_PAYMENT, LIFETIME
+  start_date           DateTime @default(now())
+  end_date             DateTime?
+  trial_end_date       DateTime?
+  grace_period_end     DateTime?
+  is_auto_renew        Boolean  @default(true)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  organization         Organization        @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  plan                 SubscriptionPlan    @relation(fields: [plan_id], references: [id])
+  usage                SubscriptionUsage?
+  history              SubscriptionHistory[]
+  invoices             SubscriptionInvoice[]
+
+  @@map("subscriptions")
+}
+
+model SubscriptionUsage {
+  id               String   @id @default(uuid())
+  subscription_id  String   @unique
+  branches_used    Int      @default(0)
+  users_used       Int      @default(0)
+  storage_used_mb  Float    @default(0)
+  orders_processed Int      @default(0)
+  api_requests     Int      @default(0)
+  last_updated     DateTime @default(now())
+
+  subscription     Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+
+  @@map("subscription_usage")
+}
+
+model SubscriptionHistory {
+  id               String   @id @default(uuid())
+  subscription_id  String
+  event_type       String   // CREATED, RENEWED, UPGRADED, DOWNGRADED, CANCELLED, EXPIRED
+  old_plan_id      String?
+  new_plan_id      String?
+  notes            String?
+  created_at       DateTime @default(now())
+
+  subscription     Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+
+  @@map("subscription_history")
+}
+
+model SubscriptionInvoice {
+  id               String   @id @default(uuid())
+  subscription_id  String
+  invoice_number   String   @unique
+  amount           Float
+  currency         String   @default("USD")
+  status           String   // PAID, UNPAID, CANCELLED, REFUNDED
+  billing_cycle    String
+  pdf_url          String?
+  paid_at          DateTime?
+  due_date         DateTime?
+  created_at       DateTime @default(now())
+
+  subscription     Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+  payments         SubscriptionPayment[]
+
+  @@map("subscription_invoices")
+}
+
+model SubscriptionPayment {
+  id                 String   @id @default(uuid())
+  invoice_id         String
+  payment_method     String   // CREDIT_CARD, DEBIT_CARD, BANK_TRANSFER, OFFLINE
+  amount             Float
+  transaction_ref    String?
+  status             String   // SUCCESS, PENDING, FAILED
+  payment_date       DateTime @default(now())
+
+  invoice            SubscriptionInvoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+
+  @@map("subscription_payments")
 }

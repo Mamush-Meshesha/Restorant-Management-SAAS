@@ -6,6 +6,7 @@ export interface UserProfile {
   username: string;
   first_name?: string;
   last_name?: string;
+  phone?: string;
   organization_id: string;
   organization?: { id: string; name: string };
   branch_id?: string | null;

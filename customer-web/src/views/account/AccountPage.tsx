@@ -4,7 +4,7 @@ import {
   Avatar, Tabs, Tab, Chip, LinearProgress, CardMedia, IconButton, CircularProgress
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconUser, IconReceipt, IconStar, IconMedal, IconHeart, IconBell, IconMapPin, IconHeartFilled } from "@tabler/icons-react";
+import { IconUser, IconReceipt, IconStar, IconMedal, IconHeart, IconBell, IconMapPin, IconHeartFilled, IconCheck } from "@tabler/icons-react";
 import { Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import { toggleFavoriteItem, toggleFavoriteLocation } from "../../redux/slices/userSlice";
@@ -12,6 +12,7 @@ import { getOrdersApi } from "../../api/orders";
 import { getReservationsApi } from "../../api/reservations";
 import { getMenuItemsApi } from "../../api/menu";
 import { getBranchesApi } from "../../api/branches";
+import { getNotificationsApi, markNotificationReadApi, Notification } from "../../api/notifications";
 
 const TIER_DATA = {
   Bronze: { next: "Silver", color: "#cd7f32", progress: 60, points: 1200, required: 2000 },
@@ -30,6 +31,7 @@ export default function AccountPage() {
   const [reservations, setReservations] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,6 +56,21 @@ export default function AccountPage() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (tab === 3) {
+      getNotificationsApi().then(setNotifications).catch(console.error);
+    }
+  }, [tab]);
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await markNotificationReadApi(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const tier = "Gold";
   const tierInfo = TIER_DATA[tier as keyof typeof TIER_DATA];
@@ -287,10 +304,36 @@ export default function AccountPage() {
         )}
         
         {tab === 3 && (
-              <Box sx={{ py: 6, textAlign: "center" }}>
-                <IconBell size={48} color={alpha("#2b2118", 0.2)} />
-                <Typography variant="h5" mt={2} color="text.secondary">All caught up!</Typography>
-                <Typography variant="body2" color="text.secondary" mt={1}>No new notifications at this time</Typography>
+              <Box sx={{ py: 2 }}>
+                {notifications.length === 0 ? (
+                  <Box sx={{ py: 6, textAlign: "center" }}>
+                    <IconBell size={48} color={alpha("#2b2118", 0.2)} />
+                    <Typography variant="h5" mt={2} color="text.secondary">All caught up!</Typography>
+                    <Typography variant="body2" color="text.secondary" mt={1}>No new notifications at this time</Typography>
+                  </Box>
+                ) : (
+                  <Stack spacing={2}>
+                    {notifications.map(notif => (
+                      <Card key={notif.id} sx={{ bgcolor: notif.is_read ? 'background.paper' : alpha('#2b2118', 0.03) }}>
+                        <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                          <Box sx={{ mt: 0.5 }}>
+                            <IconBell size={24} color={notif.is_read ? "gray" : "#2b2118"} />
+                          </Box>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="subtitle1" fontWeight={notif.is_read ? 500 : 700}>{notif.title}</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{notif.message}</Typography>
+                            <Typography variant="caption" color="text.secondary">{new Date(notif.created_at).toLocaleString()}</Typography>
+                          </Box>
+                          {!notif.is_read && (
+                            <Button size="small" variant="text" onClick={() => handleMarkRead(notif.id)}>
+                              Mark Read
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
+                )}
               </Box>
             )}
           </>

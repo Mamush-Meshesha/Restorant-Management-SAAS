@@ -20,6 +20,8 @@ import recipeRoutes from "./routes/recipe.routes";
 import analyticsRoutes from "./routes/analytics.routes";
 import uploadRoutes from "./routes/upload.routes";
 import billingRoutes from "./routes/billing.routes";
+import notificationRoutes from "./routes/notification.routes";
+import messageRoutes from "./routes/message.routes";
 
 export default (app: Application) => {
   app.use("/api/v1/auth", authRoutes);
@@ -43,4 +45,6 @@ export default (app: Application) => {
   app.use("/api/v1/analytics", analyticsRoutes);
   app.use("/api/v1/upload", uploadRoutes);
   app.use("/api/v1/billing", billingRoutes);
+  app.use("/api/v1/notification", notificationRoutes);
+  app.use("/api/v1/message", messageRoutes);
 };

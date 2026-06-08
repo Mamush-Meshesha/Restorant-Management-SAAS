@@ -3,7 +3,7 @@ import {
   Box, Card, Typography, Stack, Divider, Avatar,
   TextField, InputAdornment, IconButton, Chip, List,
   ListItemAvatar, ListItemText, ListItemButton, Badge, alpha,
-  Paper, Button, Tooltip, CircularProgress,
+  Paper, Button, Tooltip, CircularProgress, Dialog, DialogTitle, DialogContent, ListItem
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -12,87 +12,18 @@ import {
 } from "@tabler/icons-react";
 import { useAppSelector } from "@/hooks/auth";
 
-// --- Static demo data (messages live in-app only — no backend endpoint yet) ---
+import {
+  getConversations,
+  getMessages,
+  sendMessage,
+  startConversation,
+} from "../../api/_messages";
+import type { Conversation, Message } from "../../api/_messages";
+import { getUsers } from "../../api/_users";
+import type { User } from "@/types/__auth";
 
-interface Message {
-  id: string;
-  senderId: string;
-  text: string;
-  timestamp: Date;
-  read: boolean;
-}
-
-interface Conversation {
-  id: string;
-  name: string;
-  role: string;
-  avatar?: string;
-  lastMessage: string;
-  lastTime: Date;
-  unread: number;
-  online: boolean;
-  messages: Message[];
-}
-
-const generateConversations = (myId: string): Conversation[] => [
-  {
-    id: "1",
-    name: "Kitchen Team",
-    role: "Chef",
-    lastMessage: "Order #42 is ready for pickup",
-    lastTime: new Date(Date.now() - 5 * 60_000),
-    unread: 3,
-    online: true,
-    messages: [
-      { id: "m1", senderId: "1", text: "Good morning! Ready for the rush?", timestamp: new Date(Date.now() - 30 * 60_000), read: true },
-      { id: "m2", senderId: myId, text: "Always! Let's go.", timestamp: new Date(Date.now() - 28 * 60_000), read: true },
-      { id: "m3", senderId: "1", text: "Order #38 is ready, table 5 waiting.", timestamp: new Date(Date.now() - 15 * 60_000), read: true },
-      { id: "m4", senderId: "1", text: "Order #42 is ready for pickup", timestamp: new Date(Date.now() - 5 * 60_000), read: false },
-    ],
-  },
-  {
-    id: "2",
-    name: "Floor Manager",
-    role: "Branch Manager",
-    lastMessage: "Reservations are filling up fast tonight",
-    lastTime: new Date(Date.now() - 45 * 60_000),
-    unread: 1,
-    online: true,
-    messages: [
-      { id: "m5", senderId: "2", text: "Can you check the reservation list for 7pm?", timestamp: new Date(Date.now() - 2 * 3600_000), read: true },
-      { id: "m6", senderId: myId, text: "We have 12 tables booked, 4 still open.", timestamp: new Date(Date.now() - 90 * 60_000), read: true },
-      { id: "m7", senderId: "2", text: "Reservations are filling up fast tonight", timestamp: new Date(Date.now() - 45 * 60_000), read: false },
-    ],
-  },
-  {
-    id: "3",
-    name: "Inventory Team",
-    role: "Inventory",
-    lastMessage: "Tomato stock is running low",
-    lastTime: new Date(Date.now() - 3 * 3600_000),
-    unread: 0,
-    online: false,
-    messages: [
-      { id: "m8", senderId: "3", text: "Tomato stock is running low, should we reorder?", timestamp: new Date(Date.now() - 3 * 3600_000), read: true },
-      { id: "m9", senderId: myId, text: "Yes, place an order for 50kg with Sunshine Farms.", timestamp: new Date(Date.now() - 2.5 * 3600_000), read: true },
-    ],
-  },
-  {
-    id: "4",
-    name: "Cashier Desk",
-    role: "Cashier",
-    lastMessage: "Till 3 has a discrepancy",
-    lastTime: new Date(Date.now() - 5 * 3600_000),
-    unread: 0,
-    online: false,
-    messages: [
-      { id: "m10", senderId: "4", text: "Till 3 has a discrepancy of $14.50 at close.", timestamp: new Date(Date.now() - 5 * 3600_000), read: true },
-      { id: "m11", senderId: myId, text: "Log it in the system and I'll review tomorrow morning.", timestamp: new Date(Date.now() - 4.5 * 3600_000), read: true },
-    ],
-  },
-];
-
-const formatTime = (date: Date) => {
+const formatTime = (dateStr: string) => {
+  const date = new Date(dateStr);
   const diff = Date.now() - date.getTime();
   if (diff < 60_000) return "Just now";
   if (diff < 3600_000) return `${Math.floor(diff / 60_000)}m ago`;
@@ -110,12 +41,38 @@ const MessagesPage = () => {
   const { currentUser } = useAppSelector((s) => s.auth);
   const myId = currentUser?.id ?? "me";
 
-  const [conversations, setConversations] = useState<Conversation[]>(() => generateConversations(myId));
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [mobileShowConv, setMobileShowConv] = useState(false);
+  const [newConvOpen, setNewConvOpen] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await getUsers();
+      setUsers(res.data.data.filter(u => u.id !== myId));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  React.useEffect(() => {
+    getConversations().then(res => setConversations(res.data.data)).catch(console.error);
+  }, []);
+
+  React.useEffect(() => {
+    if (activeId) {
+      getMessages(activeId).then(res => setMessages(res.data.data)).catch(console.error);
+      const interval = setInterval(() => {
+        getMessages(activeId).then(res => setMessages(res.data.data)).catch(console.error);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeId]);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
   const filtered = conversations.filter(
@@ -126,33 +83,29 @@ const MessagesPage = () => {
     setActiveId(id);
     setMobileShowConv(true);
     setConversations((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? { ...c, unread: 0, messages: c.messages.map((m) => ({ ...m, read: true })) }
-          : c
-      )
+      prev.map((c) => (c.id === id ? { ...c, unread: 0 } : c))
     );
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!newMessage.trim() || !activeId) return;
     setSending(true);
-    const msg: Message = {
-      id: `m-${Date.now()}`,
-      senderId: myId,
-      text: newMessage.trim(),
-      timestamp: new Date(),
-      read: true,
-    };
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === activeId
-          ? { ...c, lastMessage: msg.text, lastTime: msg.timestamp, messages: [...c.messages, msg] }
-          : c
-      )
-    );
-    setNewMessage("");
-    setTimeout(() => setSending(false), 300);
+    try {
+      const { data } = await sendMessage(activeId, newMessage.trim());
+      setMessages(prev => [...prev, data.data]);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === activeId
+            ? { ...c, lastMessage: data.data.text, lastTime: data.data.timestamp }
+            : c
+        )
+      );
+      setNewMessage("");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSending(false);
+    }
   };
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unread, 0);
@@ -237,6 +190,7 @@ const MessagesPage = () => {
                     </Badge>
                   </ListItemAvatar>
                   <ListItemText
+                    disableTypography
                     primary={
                       <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Typography variant="subtitle2" fontWeight={600} noWrap sx={{ maxWidth: 130 }}>
@@ -276,7 +230,10 @@ const MessagesPage = () => {
               fullWidth
               startIcon={<IconCirclePlus size={16} />}
               sx={{ borderRadius: 2, textTransform: "none" }}
-              onClick={() => alert("Select a user to message — coming soon!")}
+              onClick={() => {
+                fetchUsers();
+                setNewConvOpen(true);
+              }}
             >
               New Conversation
             </Button>
@@ -355,7 +312,7 @@ const MessagesPage = () => {
                 "&::-webkit-scrollbar-thumb": { bgcolor: theme.palette.divider, borderRadius: 4 },
               }}
             >
-              {active.messages.map((msg) => {
+              {messages.map((msg) => {
                 const isMe = msg.senderId === myId;
                 return (
                   <Box
@@ -490,6 +447,49 @@ const MessagesPage = () => {
           </Card>
         )}
       </Box>
+
+      {/* New Conversation Dialog */}
+      <Dialog open={newConvOpen} onClose={() => setNewConvOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>New Conversation</DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <List disablePadding>
+            {users.length === 0 ? (
+              <ListItem>
+                <ListItemText primary="No users found" secondary="Try again later" />
+              </ListItem>
+            ) : (
+              users.map(user => (
+                <ListItemButton 
+                  key={user.id} 
+                  onClick={async () => {
+                    setNewConvOpen(false);
+                    try {
+                      const res = await startConversation(user.id);
+                      getConversations().then(r => setConversations(r.data.data)).catch(console.error);
+                      setActiveId(res.data.data.id);
+                      setMobileShowConv(true);
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
+                  sx={{ px: 3, py: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}
+                >
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 36, height: 36, fontSize: "0.85rem" }}>
+                      {getInitials(`${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username)}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText 
+                    primary={`${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username}
+                    secondary={user.role?.name || "User"}
+                    primaryTypographyProps={{ fontWeight: 600, variant: 'subtitle2' }}
+                  />
+                </ListItemButton>
+              ))
+            )}
+          </List>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

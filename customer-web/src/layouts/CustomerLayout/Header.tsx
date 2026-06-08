@@ -1,12 +1,37 @@
 import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, alpha, Badge } from "@mui/material";
-import { IconMenu2, IconUser, IconShoppingBag } from "@tabler/icons-react";
-import { Link, useLocation } from "react-router-dom";
+import { IconMenu2, IconUser, IconShoppingBag, IconBell } from "@tabler/icons-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppSelector } from "../../redux/hooks";
+import { useEffect, useState } from "react";
+import { getNotificationsApi } from "../../api/notifications";
 
 export default function Header() {
   const location = useLocation();
   const { isAuthenticated } = useAppSelector(state => state.user);
   const cartItems = useAppSelector(state => state.cart.items);
+  const navigate = useNavigate();
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const fetchNotifications = async () => {
+      try {
+        const notifs = await getNotificationsApi();
+        setUnreadCount(notifs.filter(n => !n.is_read).length);
+      } catch (e) {
+        console.error("Failed to fetch notifications", e);
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const cartItemCount = cartItems.reduce((total, item) => total + item.qty, 0);
 
@@ -87,6 +112,21 @@ export default function Header() {
             >
               <IconUser size={22} stroke={1.5} />
             </IconButton>
+
+            {isAuthenticated && (
+              <IconButton
+                color="inherit"
+                onClick={() => {
+                  navigate("/account", { state: { tab: 3 } });
+                }}
+                sx={{ '&:hover': { bgcolor: alpha('#2b2118', 0.05) } }}
+              >
+                <Badge badgeContent={unreadCount} color="error">
+                  <IconBell size={22} stroke={1.5} />
+                </Badge>
+              </IconButton>
+            )}
+
             <IconButton
               component={Link}
               to="/order"

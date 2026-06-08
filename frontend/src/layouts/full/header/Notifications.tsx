@@ -52,52 +52,20 @@ const NotificationItem = styled(MenuItem)(({ theme }) => ({
   },
 }));
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  timestamp: string;
-  type: "payment" | "user" | "system" | "calendar" | "message";
-  read: boolean;
-  avatar?: string;
-}
+import { useEffect } from "react";
+import { getNotifications, markNotificationRead, type Notification } from "../../../api/_notifications";
 
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "New Payment Received",
-    message: "Student John Doe has made a payment of $500",
-    timestamp: "2 minutes ago",
-    type: "payment",
-    read: false,
-  },
-  {
-    id: "2",
-    title: "New Student Registration",
-    message: "Jane Smith has registered for Grade 10",
-    timestamp: "1 hour ago",
-    type: "user",
-    read: false,
-  },
-  {
-    id: "3",
-    title: "System Maintenance",
-    message: "Scheduled maintenance will occur tonight at 2 AM",
-    timestamp: "3 hours ago",
-    type: "system",
-    read: true,
-  },
-  {
-    id: "4",
-    title: "Upcoming Event",
-    message: "Parent-Teacher meeting scheduled for tomorrow",
-    timestamp: "1 day ago",
-    type: "calendar",
-    read: true,
-  },
-];
+const formatTime = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
-const getNotificationIcon = (type: Notification["type"]) => {
+const getNotificationIcon = (type: string) => {
   const iconProps = { size: 20 };
   switch (type) {
     case "payment":
@@ -113,7 +81,7 @@ const getNotificationIcon = (type: Notification["type"]) => {
   }
 };
 
-const getNotificationColor = (type: Notification["type"]) => {
+const getNotificationColor = (type: string) => {
   switch (type) {
     case "payment":
       return "#13DEB9";
@@ -130,11 +98,25 @@ const getNotificationColor = (type: Notification["type"]) => {
 
 const Notifications = () => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [notifications, setNotifications] =
-    useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const open = Boolean(anchorEl);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const fetchNotifications = async () => {
+    try {
+      const res = await getNotifications();
+      setNotifications(res.data.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000); // 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const handleClick = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -144,18 +126,28 @@ const Notifications = () => {
     setAnchorEl(null);
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === id ? { ...notification, is_read: true } : notification
+        )
+      );
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, read: true }))
-    );
+  const markAllAsRead = async () => {
+    try {
+      await markNotificationRead('all');
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, is_read: true }))
+      );
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const deleteNotification = (id: string) => {
@@ -249,9 +241,9 @@ const Notifications = () => {
             notifications.map((notification) => (
               <NotificationItem
                 key={notification.id}
-                className={!notification.read ? "unread" : ""}
+                className={!notification.is_read ? "unread" : ""}
                 onClick={() =>
-                  !notification.read && markAsRead(notification.id)
+                  !notification.is_read && markAsRead(notification.id)
                 }
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
@@ -284,7 +276,7 @@ const Notifications = () => {
                       <Typography
                         variant="subtitle2"
                         sx={{
-                          fontWeight: notification.read ? 400 : 600,
+                          fontWeight: notification.is_read ? 400 : 600,
                           fontSize: "0.875rem",
                           flex: 1,
                         }}
@@ -323,7 +315,7 @@ const Notifications = () => {
                         color="text.secondary"
                         sx={{ fontSize: "0.75rem", mt: 0.5, display: "block" }}
                       >
-                        {notification.timestamp}
+                        {formatTime(notification.created_at)}
                       </Typography>
                     </>
                   }

@@ -5,7 +5,7 @@ import {
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import { IconUser, IconReceipt, IconStar, IconMedal, IconHeart, IconBell, IconMapPin, IconHeartFilled, IconCheck } from "@tabler/icons-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import { toggleFavoriteItem, toggleFavoriteLocation } from "../../redux/slices/userSlice";
 import { getOrdersApi } from "../../api/orders";
@@ -26,7 +26,8 @@ export default function AccountPage() {
   const dispatch = useAppDispatch();
   const { favoriteItems, favoriteLocations, profile: userProfile } = useAppSelector(state => state.user);
 
-  const [tab, setTab] = useState(0);
+  const location = useLocation();
+  const [tab, setTab] = useState(location.state?.tab || 0);
   const [orders, setOrders] = useState<any[]>([]);
   const [reservations, setReservations] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);

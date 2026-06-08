@@ -66,6 +66,24 @@ export const create_order = async (req: AuthenticatedRequest, res: Response, nex
       await prisma.kitchenOrder.createMany({ data: kitchenOrdersData });
     }
 
+    // --- Notify Staff ---
+    const staff = await prisma.user.findMany({
+      where: { branch_id: branchId }
+    });
+    
+    if (staff.length > 0) {
+      const orgId = req.user?.organization_id || (await prisma.organization.findFirst())!.id;
+      const notifs = staff.map(user => ({
+        user_id: user.id,
+        title: "New Order Received",
+        message: `Order #${order.id.slice(0, 8).toUpperCase()} has been placed.`,
+        type: "ORDER_NEW",
+        is_read: false,
+        organization_id: orgId
+      }));
+      await prisma.notification.createMany({ data: notifs });
+    }
+
     res.status(201).json({ message: "Order created successfully", data: order });
   } catch (error) { next(error); }
 };
@@ -100,10 +118,29 @@ export const update_order_status = async (req: AuthenticatedRequest, res: Respon
   try {
     const { id } = req.params;
     const { status } = req.body;
+    
+    // Get the order first to check if there is a customer attached
+    const existingOrder = await prisma.order.findUnique({ where: { id } });
+    
     const order = await prisma.order.update({
       where: { id },
       data: { status }
     });
+
+    // Create a notification for the customer if one exists
+    if (existingOrder && existingOrder.customer_id && existingOrder.status !== status) {
+      await prisma.notification.create({
+        data: {
+          user_id: existingOrder.customer_id,
+          title: "Order Status Update",
+          message: `Your order #${id.slice(0, 8).toUpperCase()} is now ${status}.`,
+          type: "ORDER_UPDATE",
+          is_read: false,
+          organization_id: req.user?.organization_id || (await prisma.organization.findFirst())!.id
+        }
+      });
+    }
+
     res.status(200).json({ message: 'Order status updated', data: order });
   } catch (error) { next(error); }
 };

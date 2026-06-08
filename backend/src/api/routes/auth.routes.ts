@@ -1,17 +1,11 @@
 import { Router } from 'express';
-import { login, refreshToken, getMe, changePassword } from '../../controller/auth.controller';
+import { login, refreshToken, getMe, changePassword, register } from '../../controller/auth.controller';
 import { authenticate } from '../../middleware/institute.middleware';
 
 const router = Router();
 
-/**
- * @openapi
- * tags:
- *   - name: Auth
- *     description: Authentication and authorization
- */
-
 // Public routes
+router.post('/register', register);
 router.post('/login', login);
 router.post('/refresh', refreshToken);
 

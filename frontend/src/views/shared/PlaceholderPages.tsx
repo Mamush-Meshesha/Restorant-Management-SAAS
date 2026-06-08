@@ -380,12 +380,13 @@ export const CustomersPage = () => (
         actionCol,
       ],
       fetchFn: getCustomers,
-      createFn: (data) => createCustomer({ name: data.name, email: data.email, phone: data.phone }),
+      createFn: (data) => createCustomer({ name: data.name, email: data.email, phone: data.phone, password: data.password }),
       transformFn: (raw) => (raw.data ?? []).map((c: any) => ({ ...c })),
       formSchema: [
         { field: "name", label: "Customer Name", required: true },
         { field: "email", label: "Email", type: "email" },
         { field: "phone", label: "Phone" },
+        { field: "password", label: "Password (Optional)", type: "password" },
       ],
     }}
   />

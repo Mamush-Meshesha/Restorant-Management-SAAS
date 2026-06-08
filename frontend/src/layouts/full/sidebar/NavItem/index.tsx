@@ -48,7 +48,7 @@ const NavItem: React.FC<NavItemProps> = ({
   const itemIcon = <Icon stroke={1.5} size="1.3rem" />;
   const [open, setOpen] = useState(false);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = () => {
     if (item.children) {
       setOpen(!open);
     } else if (onClick) {
@@ -126,7 +126,7 @@ const NavItem: React.FC<NavItemProps> = ({
       </Tooltip>
       {item.children && !sidebarCompact && (
         <Collapse in={open} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding sx={{ pl: 2 }}>
+          <List component="ul" disablePadding sx={{ pl: 2 }}>
             {item.children.map((child) => (
               <NavItem
                 key={child.id}

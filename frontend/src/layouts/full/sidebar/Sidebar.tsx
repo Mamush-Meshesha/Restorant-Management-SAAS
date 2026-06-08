@@ -7,6 +7,7 @@ import {
   styled,
 } from "@mui/material";
 import SidebarItems from "./SidebarItems";
+import SubscriptionWidget from "./SubscriptionWidget";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../redux/store";
@@ -165,6 +166,10 @@ const MSidebar = ({
               <SidebarItems />
             </Box>
 
+            <Box sx={{ mt: "auto", display: sidebarCompact ? "none" : "block", pb: 6 }}>
+              <SubscriptionWidget compact={sidebarCompact} />
+            </Box>
+
             {/* Footer Section */}
             <FooterSection sx={{ display: sidebarCompact ? "none" : "block" }}>
               <Typography
@@ -284,6 +289,10 @@ const MSidebar = ({
         {/* Navigation Items */}
         <Box sx={{ flex: 1, overflowY: "auto", py: 2 }}>
           <SidebarItems />
+        </Box>
+
+        <Box sx={{ mt: "auto", pb: 6 }}>
+          <SubscriptionWidget compact={false} />
         </Box>
 
         {/* Footer Section */}

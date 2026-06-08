@@ -48,7 +48,19 @@ const fadeUp = {
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type OrderStatus = "Preparing" | "Ready" | "Served" | "Pending";
+// Backend returns uppercase statuses; we normalise to title-case for the UI.
+type OrderStatus = "Preparing" | "Ready" | "Served" | "Pending" | "Cancelled" | "Completed";
+
+const normaliseStatus = (raw: string): OrderStatus => {
+  const map: Record<string, OrderStatus> = {
+    PENDING: "Pending", PREPARING: "Preparing", READY: "Ready",
+    SERVED: "Served", COMPLETED: "Completed", CANCELLED: "Cancelled",
+    // already title-case fallback
+    Pending: "Pending", Preparing: "Preparing", Ready: "Ready",
+    Served: "Served", Completed: "Completed", Cancelled: "Cancelled",
+  };
+  return map[raw] ?? "Pending";
+};
 
 interface StatCardProps {
   title: string;
@@ -184,14 +196,17 @@ const StatCard = ({ title, value, change, positive, icon, accent, sub, index }: 
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 const statusConfig: Record<OrderStatus, { bg: string; text: string; label: string }> = {
-  Pending: { bg: alpha("#F59E0B", 0.1), text: "#B45309", label: "Pending" },
+  Pending:   { bg: alpha("#F59E0B", 0.1), text: "#B45309", label: "Pending" },
   Preparing: { bg: alpha("#3B82F6", 0.1), text: "#1D4ED8", label: "Preparing" },
-  Ready: { bg: alpha("#10B981", 0.1), text: "#047857", label: "Ready" },
-  Served: { bg: alpha("#6B7280", 0.1), text: "#374151", label: "Served" },
+  Ready:     { bg: alpha("#10B981", 0.1), text: "#047857", label: "Ready" },
+  Served:    { bg: alpha("#6B7280", 0.1), text: "#374151", label: "Served" },
+  Completed: { bg: alpha("#10B981", 0.1), text: "#047857", label: "Completed" },
+  Cancelled: { bg: alpha("#EF4444", 0.1), text: "#B91C1C", label: "Cancelled" },
 };
 
-const StatusBadge = ({ status }: { status: OrderStatus }) => {
-  const cfg = statusConfig[status];
+const StatusBadge = ({ status }: { status: string }) => {
+  const normalised = normaliseStatus(status);
+  const cfg = statusConfig[normalised] ?? statusConfig["Pending"];
   return (
     <Box sx={{ display: "inline-flex", alignItems: "center", gap: "5px", px: 1.25, py: 0.4, borderRadius: "5px", bgcolor: cfg.bg }}>
       <Box sx={{ width: 5, height: 5, borderRadius: "50%", bgcolor: cfg.text, flexShrink: 0 }} />
@@ -223,12 +238,12 @@ const Dashboard = () => {
       const ordersRes = await getOrders({ limit: 6 });
       const orders: Order[] = ordersRes.data.data || [];
       setRecentOrders(
-        orders.map((o) => ({
-          id: o.order_number,
+        orders.map((o, idx) => ({
+          id: o.order_number || o.id || `order-${idx}`,  // always a unique key
           table: o.table?.table_number ? `T-${o.table.table_number}` : "Takeaway",
           items: o.items?.reduce((s, i) => s + i.quantity, 0) || 0,
           total: `$${Number(o.total_amount).toFixed(2)}`,
-          status: o.status,
+          status: normaliseStatus(o.status ?? "PENDING"),
           elapsed: Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000) + "m",
         }))
       );
@@ -476,7 +491,7 @@ const Dashboard = () => {
                           </Grid>
                           <Grid size={{ xs: 3 }}>
                             <Stack direction="row" alignItems="center" spacing={1.5}>
-                              <StatusBadge status={order.status as OrderStatus} />
+                              <StatusBadge status={order.status} />
                               <Stack direction="row" alignItems="center" spacing={0.4}>
                                 <IconClock size={11} color={theme.palette.text.secondary} />
                                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>

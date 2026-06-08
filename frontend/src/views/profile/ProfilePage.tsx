@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Box, Card, CardContent, Typography, Avatar, Grid, TextField,
   Button, Stack, Chip, Divider, Alert, CircularProgress, alpha,
@@ -181,7 +181,7 @@ const ProfilePage = () => {
       {/* Stats Row */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {statCards.map((stat) => (
-          <Grid item xs={6} md={3} key={stat.label}>
+          <Grid size={{ xs: 6, md: 3 }} key={stat.label}>
             <Card variant="outlined" sx={{ borderRadius: 2, transition: "box-shadow 0.2s", "&:hover": { boxShadow: theme.shadows[3] } }}>
               <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
                 <Stack direction="row" spacing={1.5} alignItems="center">
@@ -239,7 +239,7 @@ const ProfilePage = () => {
                 Update your name, email and username.
               </Typography>
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="First Name"
@@ -249,7 +249,7 @@ const ProfilePage = () => {
                     size="small"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Last Name"
@@ -259,7 +259,7 @@ const ProfilePage = () => {
                     size="small"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Email Address"
@@ -270,7 +270,7 @@ const ProfilePage = () => {
                     size="small"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Username"

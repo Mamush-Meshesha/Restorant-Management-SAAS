@@ -96,6 +96,95 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
+export const register = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { first_name, last_name, email, password, phone } = req.body;
+
+    if (!email || !password || !first_name || !last_name) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already in use' });
+    }
+
+    let defaultOrg = await prisma.organization.findFirst();
+    if (!defaultOrg) {
+      defaultOrg = await prisma.organization.create({
+        data: { name: "Default Restaurant", is_active: true }
+      });
+    }
+
+    let customerRole = await prisma.role.findFirst({
+      where: { name: "Customer", organization_id: defaultOrg.id }
+    });
+    
+    if (!customerRole) {
+      customerRole = await prisma.role.create({
+        data: { name: "Customer", organization_id: defaultOrg.id }
+      });
+    }
+
+    const hashedPassword = await hashPassword(password);
+    const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email,
+        password_hash: hashedPassword,
+        first_name,
+        last_name,
+        organization_id: defaultOrg.id,
+        role_id: customerRole.id,
+      },
+      include: {
+        role: true,
+        organization: true,
+      }
+    });
+
+    const customerPhone = phone || `reg_${Date.now()}`;
+
+    await prisma.customer.upsert({
+      where: { phone: customerPhone },
+      update: {},
+      create: {
+        organization_id: defaultOrg.id,
+        first_name,
+        last_name,
+        email,
+        phone: customerPhone,
+      }
+    });
+
+    const token = generateToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    const loginExpiry = new Date();
+    loginExpiry.setDate(loginExpiry.getDate() + 1);
+
+    return res.status(201).json({
+      message: 'Registration successful',
+      token,
+      refreshToken,
+      loginExpiry: loginExpiry.toISOString(),
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role_id: user.role_id,
+        organization_id: user.organization_id,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * @openapi
  * /api/v1/auth/refresh:

@@ -15,10 +15,10 @@ import { toast } from "react-toastify";
 interface ImageUploadProps {
   value: string;
   onChange: (url: string) => void;
-  label?: string;
+
 }
 
-const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange, label = "Upload Image" }) => {
+const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
   const theme = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);

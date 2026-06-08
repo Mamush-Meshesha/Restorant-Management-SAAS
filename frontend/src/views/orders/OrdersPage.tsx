@@ -7,10 +7,10 @@ import {
   InputAdornment,
 } from "@mui/material";
 import {
-  IconSearch, IconRefresh, IconEye, IconX, IconReceipt,
+  IconSearch, IconRefresh, IconX, IconReceipt,
   IconArmchair, IconShoppingCart, IconBike, IconClock,
 } from "@tabler/icons-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import PageContainer from "../../components/container/PageContainer";
 import { getOrders, updateOrderStatus, cancelOrder } from "@/api/_orders";
 import type { Order, OrderStatus } from "@/types/__restaurant";
@@ -88,11 +88,11 @@ function OrderDetailDialog({ order, open, onClose, onStatusChange }: {
 
       <DialogContent sx={{ pt: 2 }}>
         <Grid container spacing={2} mb={2}>
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Typography variant="caption" color="text.secondary">Table</Typography>
-            <Typography fontWeight={600}>{order.table?.name ?? "Takeaway"}</Typography>
+            <Typography fontWeight={600}>{order.table?.table_number ?? "Takeaway"}</Typography>
           </Grid>
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Typography variant="caption" color="text.secondary">Placed</Typography>
             <Typography fontWeight={600}>{new Date(order.created_at).toLocaleString()}</Typography>
           </Grid>
@@ -194,7 +194,7 @@ function OrderCard({ order, onClick }: { order: Order; onClick: () => void }) {
               <Stack direction="row" spacing={0.5} alignItems="center" mt={0.25}>
                 {TYPE_ICON[order.order_type]}
                 <Typography variant="caption" color="text.secondary">
-                  {order.table?.name ?? order.order_type.replace("_", " ")}
+                  {order.table?.table_number ?? order.order_type.replace("_", " ")}
                 </Typography>
               </Stack>
             </Box>
@@ -274,7 +274,7 @@ export default function OrdersPage() {
     const q = search.toLowerCase();
     return (
       o.order_number?.toLowerCase().includes(q) ||
-      o.table?.name?.toLowerCase().includes(q) ||
+      o.table?.table_number?.toLowerCase().includes(q) ||
       o.order_type?.toLowerCase().includes(q)
     );
   });
@@ -372,7 +372,7 @@ export default function OrdersPage() {
               </Typography>
               <Grid container spacing={2}>
                 {activeStatuses.flatMap(s => grouped[s]).map(order => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={order.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={order.id}>
                     <OrderCard order={order} onClick={() => { setSelected(order); setDetailOpen(true); }} />
                   </Grid>
                 ))}
@@ -388,7 +388,7 @@ export default function OrdersPage() {
               </Divider>
               <Grid container spacing={2}>
                 {archiveStatuses.flatMap(s => grouped[s]).slice(0, 24).map(order => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={order.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={order.id}>
                     <OrderCard order={order} onClick={() => { setSelected(order); setDetailOpen(true); }} />
                   </Grid>
                 ))}
@@ -400,7 +400,7 @@ export default function OrdersPage() {
           {statusFilter !== "ALL" && (
             <Grid container spacing={2}>
               {filtered.map(order => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={order.id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={order.id}>
                   <OrderCard order={order} onClick={() => { setSelected(order); setDetailOpen(true); }} />
                 </Grid>
               ))}

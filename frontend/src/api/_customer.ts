@@ -16,6 +16,7 @@ export const getCustomers = (): Promise<AxiosResponse<{ data: Customer[] }>> =>
 export const createCustomer = (data: {
   name: string;
   email?: string;
+  password?: string;
   phone?: string;
 }): Promise<AxiosResponse<{ message: string; data: Customer }>> =>
   api.post("/customer", data);

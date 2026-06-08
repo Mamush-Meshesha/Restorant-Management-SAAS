@@ -1,0 +1,321 @@
+name: CI — TypeScript Check, Unit Tests & DB Migration
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+# Cancel in-progress runs for the same branch to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+
+  # ── 1. TypeScript type-check (backend) ───────────────────────────────────
+  backend-typecheck:
+    name: '🔷 Backend TypeScript Check'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: TypeScript compile check (no emit)
+        run: npx tsc --noEmit
+
+
+  # ── 2. TypeScript type-check (frontend) ──────────────────────────────────
+  frontend-typecheck:
+    name: '🔷 Frontend TypeScript Check'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript compile check (no emit)
+        run: npx tsc --noEmit
+
+
+  # ── 3. Backend unit tests ─────────────────────────────────────────────────
+  backend-unit-tests:
+    name: '🧪 Backend Unit Tests'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run unit tests with coverage
+        run: npx jest --ci --coverage --forceExit
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          JWT_SECRET:   ci-test-jwt-secret-do-not-use-in-prod
+          JWT_EXPIRY:   1d
+          NODE_ENV:     test
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: backend/coverage/
+          retention-days: 7
+
+
+  # ── 4. Database migration (integration) ──────────────────────────────────
+  db-migrate:
+    name: '🗃️  Prisma Auto-Migrate'
+    runs-on: ubuntu-latest
+    needs: [backend-typecheck]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER:     ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB:       rms_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/rms_ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Apply migrations (prisma migrate deploy)
+        run: npx prisma migrate deploy
+
+      - name: Validate schema is in sync
+        run: npx prisma validate
+
+      - name: Run seed (subscription plans)
+        run: node prisma/seed_subscriptions.js
+        continue-on-error: true   # non-blocking — seed may already exist
+
+
+  # ── 5. Integration smoke tests (backend + real DB) ────────────────────────
+  integration-tests:
+    name: '🔗 Integration Smoke Tests'
+    runs-on: ubuntu-latest
+    needs: [db-migrate, backend-unit-tests]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER:     ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB:       rms_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/rms_ci
+      JWT_SECRET:   ci-test-jwt-secret-do-not-use-in-prod
+      JWT_EXPIRY:   1d
+      PORT:         3000
+      NODE_ENV:     test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Start backend server in background
+        run: npx ts-node src/app.ts &
+        # Give the server a few seconds to boot
+      
+      - name: Wait for server to be ready
+        run: |
+          for i in $(seq 1 15); do
+            curl -sf http://localhost:3000/api/v1/auth/login \
+              -H 'Content-Type: application/json' \
+              -d '{"email":"x","password":"x"}' \
+              -o /dev/null && echo "Server ready" && break
+            echo "Waiting... ($i)"
+            sleep 2
+          done
+
+      - name: Smoke — POST /auth/login returns 400 (missing body)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST http://localhost:3000/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          echo "Status: $STATUS"
+          [ "$STATUS" = "400" ] || (echo "Expected 400, got $STATUS" && exit 1)
+
+      - name: Smoke — GET /billing/plans returns 401 (no token)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            http://localhost:3000/api/v1/billing/plans)
+          echo "Status: $STATUS"
+          [ "$STATUS" = "401" ] || (echo "Expected 401, got $STATUS" && exit 1)
+
+      - name: Smoke — GET /menu/categories returns 401 (no token)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            http://localhost:3000/api/v1/menu/categories)
+          echo "Status: $STATUS"
+          [ "$STATUS" = "401" ] || (echo "Expected 401, got $STATUS" && exit 1)
+
+      - name: Smoke — GET /api-docs returns 200 (Swagger UI)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            http://localhost:3000/api-docs/)
+          echo "Status: $STATUS"
+          [ "$STATUS" = "200" ] || (echo "Expected 200, got $STATUS" && exit 1)
+
+
+  # ── 6. Frontend build check ───────────────────────────────────────────────
+  frontend-build:
+    name: '🏗️  Frontend Build Check'
+    runs-on: ubuntu-latest
+    needs: [frontend-typecheck]
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          # Suppress Vite type-checking warnings in CI
+          CI: false
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 3
+
+
+  # ── Summary gate (required for branch protection) ─────────────────────────
+  ci-success:
+    name: '✅ All CI Checks Passed'
+    runs-on: ubuntu-latest
+    needs:
+      - backend-typecheck
+      - frontend-typecheck
+      - backend-unit-tests
+      - db-migrate
+      - integration-tests
+      - frontend-build
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+            echo "One or more CI jobs failed"
+            exit 1
+          fi
+          echo "All CI checks passed 🎉"

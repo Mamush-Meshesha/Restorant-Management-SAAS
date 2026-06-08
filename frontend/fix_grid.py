@@ -1,52 +1,122 @@
+"""
+MUI Grid v5 → v7 migration script.
+
+Converts deprecated Grid props to the new unified API:
+  Old: <Grid item xs={12} sm={6} md={4}>
+  New: <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+
+Also removes the standalone `item` prop:
+  Old: <Grid item>
+  New: <Grid>
+
+Handles:
+  - <Grid item xs={...} sm={...}>
+  - <Grid xs={...} md={...}>  (item prop already absent)
+  - Quoted values like xs="12"
+  - Preserves all other props (spacing, sx, etc.)
+  - Removes 'item' keyword prop
+  - Does NOT touch <Grid container> spacing props
+"""
+
 import os
 import re
 
-def fix_grid(filepath):
-    with open(filepath, 'r') as f:
+
+BREAKPOINTS = {'xs', 'sm', 'md', 'lg', 'xl'}
+
+
+def replacer(match):
+    """Convert a single <Grid ...> tag."""
+    tag_content = match.group(1)
+
+    # Parse all props — handle both {expr} and "string" values
+    all_props = re.findall(
+        r'(\w+)=\{([^}]*)\}|(\w+)="([^"]*)"|(\bitem\b)',
+        tag_content
+    )
+
+    sizes = {}
+    other_attrs = []
+
+    # Rebuild props from regex groups
+    raw_attrs = tag_content.strip()
+
+    # Remove 'item' keyword
+    raw_attrs = re.sub(r'\bitem\b', '', raw_attrs)
+
+    # Extract breakpoint props
+    def extract_bp(text):
+        result = {}
+        kept = text
+        for bp in BREAKPOINTS:
+            # Numeric / expression: xs={12}
+            m = re.search(rf'\b{bp}=\{{([^}}]*)\}}', kept)
+            if m:
+                result[bp] = m.group(1).strip()
+                kept = kept.replace(m.group(0), '', 1)
+                continue
+            # Quoted: xs="12"
+            m = re.search(rf'\b{bp}="([^"]*)"', kept)
+            if m:
+                result[bp] = m.group(1).strip()
+                kept = kept.replace(m.group(0), '', 1)
+        return result, kept.strip()
+
+    sizes, remaining = extract_bp(raw_attrs)
+
+    # Clean up extra whitespace
+    remaining = re.sub(r'\s{2,}', ' ', remaining).strip()
+
+    # Build the new tag
+    parts = ['<Grid']
+    if sizes:
+        size_str = ', '.join(f'{k}: {v}' for k, v in sorted(sizes.items()))
+        parts.append(f'size={{{{ {size_str} }}}}')
+    if remaining:
+        parts.append(remaining)
+    parts.append('>')
+
+    return ' '.join(parts).replace(' >', '>')
+
+
+def fix_file(filepath):
+    with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    def replacer(match):
-        attrs = match.group(1)
-        sizes = []
-        other_attrs = []
-        for attr_match in re.finditer(r'([a-zA-Z0-9_]+)={([^}]+)}', attrs):
-            key = attr_match.group(1)
-            val = attr_match.group(2)
-            if key in ['xs', 'sm', 'md', 'lg', 'xl']:
-                sizes.append(f"{key}: {val}")
-            else:
-                other_attrs.append(f"{key}={{{val}}}")
-        
-        for attr_match in re.finditer(r'([a-zA-Z0-9_]+)="([^"]+)"', attrs):
-            key = attr_match.group(1)
-            val = attr_match.group(2)
-            if key in ['xs', 'sm', 'md', 'lg', 'xl']:
-                sizes.append(f"{key}: {val}")
-            else:
-                other_attrs.append(f'{key}="{val}"')
+    # Match any <Grid ...> tag that has at least one breakpoint or 'item' prop
+    # Uses a non-greedy match that stops at the first >
+    pattern = re.compile(
+        r'<Grid\s+((?:[^>](?!/>))*?(?:\bitem\b|'
+        + '|'.join(BREAKPOINTS)
+        + r')[^>]*?)>',
+        re.DOTALL
+    )
 
-        # check for naked sizes like xs={12} that the regex missed due to spaces? No, regex is fine.
-        
-        sizes_str = "{" + ", ".join(sizes) + "}" if sizes else ""
-        other_str = " ".join(other_attrs)
-        
-        res = "<Grid"
-        if sizes_str:
-            res += f" size={{{sizes_str}}}"
-        if other_str:
-            res += f" {other_str}"
-        res += ">"
-        return res
-
-    new_content = re.sub(r'<Grid\s+item\s+([^>]+)>', replacer, content)
-    new_content = re.sub(r'<Grid\s+item>', r'<Grid>', new_content)
+    new_content = pattern.sub(replacer, content)
 
     if new_content != content:
-        with open(filepath, 'w') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             f.write(new_content)
-        print(f"Fixed {filepath}")
+        print(f'  ✔ Fixed: {filepath}')
+        return True
+    return False
 
-for root, dirs, files in os.walk('src/views'):
-    for file in files:
-        if file.endswith('.tsx'):
-            fix_grid(os.path.join(root, file))
+
+def main():
+    search_roots = ['src/views', 'src/layouts', 'src/components']
+    fixed = 0
+    for root_dir in search_roots:
+        if not os.path.isdir(root_dir):
+            continue
+        for dirpath, _, files in os.walk(root_dir):
+            for fname in files:
+                if fname.endswith('.tsx') or fname.endswith('.jsx'):
+                    path = os.path.join(dirpath, fname)
+                    if fix_file(path):
+                        fixed += 1
+
+    print(f'\nDone — {fixed} file(s) updated.')
+
+
+if __name__ == '__main__':
+    main()

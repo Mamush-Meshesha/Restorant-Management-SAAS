@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../../redux/store";
 import Menuitems, { type SidebarMenuItem } from "./MenuItems";
 import NavGroup from "./NavGroup/NavGroup";
-import type { NavHeaderItemType } from "./NavItem";
+import type { NavHeaderItemType, NavItemType } from "./NavItem";
 import NavItem from "./NavItem";
 import type { AppRole } from "../../../config/roles";
 import { useState, useEffect } from "react";
@@ -23,7 +23,7 @@ const SidebarItems = () => {
   const roleName = useSelector((state: RootState) => state.auth.currentUser?.role?.name) as AppRole | undefined;
   const sidebarCompact = useSelector((state: RootState) => state.theme?.sidebarCompact ?? false);
 
-  const [dynamicCategories, setDynamicCategories] = useState<SidebarMenuItem[]>([]);
+  const [dynamicCategories, setDynamicCategories] = useState<NavItemType[]>([]);
 
   useEffect(() => {
     getCategories().then(res => {
@@ -40,19 +40,18 @@ const SidebarItems = () => {
     }).catch(console.error);
   }, []);
 
-  // Filter items based on role
+  // Filter items based on role and inject dynamic categories
   let filteredItems = Menuitems.filter((item) => {
     if (!item.roles || item.roles.length === 0) return true; // Show if no roles specified
     if (!roleName) return false; // Hide if user has no role but item requires one
     return item.roles.includes(roleName);
-  });
-
-  // Inject dynamic categories after the "Menu Items" entry
-  const menuItemsIndex = filteredItems.findIndex(i => !isNavHeaderItem(i) && i.title === "Menu Items");
-  if (menuItemsIndex !== -1 && dynamicCategories.length > 0) {
-    // Insert dynamic categories
-    filteredItems.splice(menuItemsIndex + 1, 0, ...dynamicCategories);
-  }
+  }).map((item) => {
+    // Inject dynamic categories into the "Categories" tab children
+    if (!isNavHeaderItem(item) && item.title === "Categories" && dynamicCategories.length > 0) {
+      return { ...item, children: dynamicCategories };
+    }
+    return item;
+  }) as SidebarMenuItem[];
 
   return (
     <Box sx={{ px: sidebarCompact ? 1 : 3 }}>
@@ -62,10 +61,10 @@ const SidebarItems = () => {
             !sidebarCompact && <NavGroup item={item} key={item.subheader} />
           ) : (
             <NavItem
-              item={item}
-              disabled={item.disabled}
+              item={item as NavItemType}
+              disabled={(item as NavItemType).disabled}
               pathDirect={pathDirect}
-              key={item.id}
+              key={(item as NavItemType).id}
               level={1}
             />
           )

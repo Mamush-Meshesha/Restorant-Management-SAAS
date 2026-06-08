@@ -1,11 +1,34 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  sm-system-backend:
-    container_name: sms-be
-    image: natty98282/sms-be:${IMAGE_TAG}
+  backend:
+    build: .
+    container_name: hummyfly-backend
     ports:
-      - "3000:10001"
+      - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://sm_owner:npg_OkYIawQKX0e3@ep-jolly-cherry-a4jma35y-pooler.us-east-1.aws.neon.tech/sm?sslmode=require&channel_binding=require
-      - PORT=10001
+      - NODE_ENV=development
+      - PORT=3000
+      # Using a local dockerized DB for local testing
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/hummyfly?schema=public
+    depends_on:
+      - db
+    volumes:
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - ./.env:/app/.env
+
+  db:
+    image: postgres:15-alpine
+    container_name: hummyfly-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=hummyfly
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

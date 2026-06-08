@@ -4,7 +4,7 @@ import {
   Avatar, Tabs, Tab, Chip, LinearProgress, CardMedia, IconButton, CircularProgress
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconUser, IconReceipt, IconStar, IconMedal, IconHeart, IconBell, IconMapPin, IconHeartFilled, IconCheck } from "@tabler/icons-react";
+import { IconUser, IconReceipt, IconStar, IconMedal, IconHeart, IconBell, IconMapPin, IconHeartFilled, } from "@tabler/icons-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import { toggleFavoriteItem, toggleFavoriteLocation } from "../../redux/slices/userSlice";

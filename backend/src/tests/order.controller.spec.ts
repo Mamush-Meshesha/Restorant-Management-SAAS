@@ -77,6 +77,9 @@ describe('Order Controller', () => {
       (prismaMock.order.create as jest.Mock).mockResolvedValue(mockOrder);
       (prismaMock.kitchenStation.findFirst as jest.Mock).mockResolvedValue(mockStation);
       (prismaMock.kitchenOrder.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+      (prismaMock.user.findMany as jest.Mock).mockResolvedValue([{ id: 'staff-1', branch_id: 'branch-1' }]);
+      (prismaMock.organization.findFirst as jest.Mock).mockResolvedValue({ id: 'org-1' });
+      (prismaMock.notification.createMany as jest.Mock).mockResolvedValue({ count: 1 });
 
       await create_order(req as any, res as unknown as Response, jest.fn());
 
@@ -99,6 +102,7 @@ describe('Order Controller', () => {
       (prismaMock.order.create as jest.Mock).mockResolvedValue(mockOrder);
       (prismaMock.kitchenStation.findFirst as jest.Mock).mockResolvedValue(null);
       (prismaMock.kitchenStation.create as jest.Mock).mockResolvedValue(mockStation);
+      (prismaMock.user.findMany as jest.Mock).mockResolvedValue([]);
 
       await create_order(req as any, res as unknown as Response, jest.fn());
 
@@ -137,7 +141,9 @@ describe('Order Controller', () => {
       const res = httpMocks.createResponse();
 
       const updatedOrder = { ...mockOrder, status: 'COMPLETED' };
+      (prismaMock.order.findUnique as jest.Mock).mockResolvedValue(mockOrder);
       (prismaMock.order.update as jest.Mock).mockResolvedValue(updatedOrder);
+      (prismaMock.notification.create as jest.Mock).mockResolvedValue({});
 
       await update_order_status(req as any, res as unknown as Response, jest.fn());
 

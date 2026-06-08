@@ -12,7 +12,6 @@
     "test:unit": "jest --ci --forceExit --testPathPattern=src/tests",
     "typecheck": "tsc --noEmit",
     "start": "node dist/app.js",
-    "prestart": "npm run build",
     "dev": "nodemon src/app.ts",
     "build": "tsc",
     "start-dev": "ts-node ./src/app.ts",

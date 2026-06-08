@@ -5,5 +5,5 @@ export interface TopLevelConfig {
 
 export interface Vals {
   MONGODB_URL?: string;
-  PORT: string;
+  PORT: number;
 }

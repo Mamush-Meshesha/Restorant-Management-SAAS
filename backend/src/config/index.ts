@@ -5,7 +5,7 @@ import { TopLevelConfig, Vals } from "./types/config";
 const getConfig = (config: Vals): TopLevelConfig => ({
   MONGODB_URL: config.MONGODB_URL || process.env.MONGODB_URL as string,
   _VALS: {
-    PORT: process.env.PORT || ""
+    PORT: parseInt(process.env.PORT || "3000", 10)
   }
 });
 

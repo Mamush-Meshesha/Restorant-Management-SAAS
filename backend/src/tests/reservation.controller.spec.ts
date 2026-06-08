@@ -48,6 +48,9 @@ describe('Reservation Controller', () => {
       const res = httpMocks.createResponse();
 
       (prismaMock.reservation.create as jest.Mock).mockResolvedValue(mockReservation);
+      (prismaMock.user.findMany as jest.Mock).mockResolvedValue([{ id: 'staff-1', branch_id: 'branch-1' }]);
+      (prismaMock.organization.findFirst as jest.Mock).mockResolvedValue({ id: 'org-1' });
+      (prismaMock.notification.createMany as jest.Mock).mockResolvedValue({ count: 1 });
 
       await create_reservation(req as any, res as unknown as Response, jest.fn());
 
@@ -81,6 +84,7 @@ describe('Reservation Controller', () => {
       const res = httpMocks.createResponse();
 
       (prismaMock.reservation.update as jest.Mock).mockResolvedValue({ ...mockReservation, status: 'CONFIRMED' });
+      (prismaMock.notification.create as jest.Mock).mockResolvedValue({});
 
       await update_reservation_status(req as any, res as unknown as Response, jest.fn());
 
@@ -103,6 +107,7 @@ describe('Reservation Controller', () => {
 
       (prismaMock.reservation.update as jest.Mock).mockResolvedValue({ ...mockReservation, status: 'SEATED' });
       (prismaMock.table.update as jest.Mock).mockResolvedValue({});
+      (prismaMock.notification.create as jest.Mock).mockResolvedValue({});
 
       await update_reservation_status(req as any, res as unknown as Response, jest.fn());
 

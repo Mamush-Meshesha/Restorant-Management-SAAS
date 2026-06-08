@@ -159,6 +159,26 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       }
     });
 
+    // --- Notify Admins ---
+    const admins = await prisma.user.findMany({
+      where: {
+        organization_id: defaultOrg.id,
+        role: { name: { in: ['SUPERADMIN', 'COMPANY_ADMIN'] } }
+      }
+    });
+
+    if (admins.length > 0) {
+      const notifs = admins.map(admin => ({
+        user_id: admin.id,
+        title: "New Customer Registration",
+        message: `${first_name} ${last_name} has registered as a new customer.`,
+        type: "USER_REGISTERED",
+        is_read: false,
+        organization_id: defaultOrg.id
+      }));
+      await prisma.notification.createMany({ data: notifs });
+    }
+
     const token = generateToken(user);
     const refreshToken = generateRefreshToken(user);
 

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hummyfly Customer</string>
+    <string name="title_activity_main">Hummyfly Customer</string>
+    <string name="package_name">com.hummyfly.customer</string>
+    <string name="custom_url_scheme">com.hummyfly.customer</string>
+</resources>

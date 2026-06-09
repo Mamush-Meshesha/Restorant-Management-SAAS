@@ -1,4 +1,4 @@
-import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, alpha, Badge } from "@mui/material";
+import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, alpha, Badge, Drawer, List, ListItem, ListItemButton, ListItemText, Divider } from "@mui/material";
 import { IconMenu2, IconUser, IconShoppingBag, IconBell } from "@tabler/icons-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppSelector } from "../../redux/hooks";
@@ -12,6 +12,7 @@ export default function Header() {
   const navigate = useNavigate();
 
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -42,12 +43,54 @@ export default function Header() {
     { label: "Account", path: "/login" },
   ];
 
+  const handleDrawerToggle = () => {
+    setMobileOpen((prevState) => !prevState);
+  };
+
+  const drawer = (
+    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
+      <Typography variant="h6" sx={{ my: 2, color: 'primary.main', fontWeight: 700 }}>
+        RÉSERVER
+      </Typography>
+      <Divider />
+      <List>
+        {navItems.map((item) => {
+          const isActive = location.pathname.startsWith(item.path);
+          return (
+            <ListItem key={item.label} disablePadding>
+              <ListItemButton component={Link} to={item.path} sx={{ textAlign: 'center' }}>
+                <ListItemText 
+                  primary={item.label} 
+                  primaryTypographyProps={{ 
+                    color: isActive ? 'secondary.main' : 'text.primary',
+                    fontWeight: isActive ? 600 : 400
+                  }} 
+                />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
+        {isAuthenticated && (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/account" sx={{ textAlign: 'center' }}>
+              <ListItemText primary="My Account" />
+            </ListItemButton>
+          </ListItem>
+        )}
+      </List>
+    </Box>
+  );
+
   return (
     <AppBar position="fixed">
       <Container maxWidth="xl">
         <Toolbar disableGutters sx={{ height: 80, justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <IconButton sx={{ display: { xs: "flex", md: "none" } }} color="inherit">
+            <IconButton 
+              sx={{ display: { xs: "flex", md: "none" } }} 
+              color="inherit"
+              onClick={handleDrawerToggle}
+            >
               <IconMenu2 />
             </IconButton>
             <Typography
@@ -149,6 +192,24 @@ export default function Header() {
           </Box>
         </Toolbar>
       </Container>
+      
+      <nav>
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{
+            keepMounted: true, // Better open performance on mobile.
+          }}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 250, bgcolor: 'background.paper' },
+          }}
+        >
+          {drawer}
+        </Drawer>
+      </nav>
     </AppBar>
   );
 }
+

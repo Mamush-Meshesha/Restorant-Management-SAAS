@@ -1,0 +1,66 @@
+{
+  "name": "restaurant-pos-desktop",
+  "version": "1.0.0",
+  "description": "Restaurant Management System – Desktop POS App",
+  "main": "main.js",
+  "author": "HummyFly",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev:frontend\" \"npm run dev:electron\"",
+    "dev:frontend": "cd ../frontend && npm run dev",
+    "dev:electron": "wait-on http://localhost:5173 && electron . --no-sandbox",
+    "start": "electron . --no-sandbox",
+    "build": "npm run build:frontend && electron-builder",
+    "build:win": "npm run build:frontend && electron-builder --win",
+    "build:frontend": "cd ../frontend && npm run build",
+    "pack": "electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.my.restaurant-pos",
+    "productName": "Restaurant POS",
+    "directories": {
+      "output": "dist-build",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "assets/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/dist",
+        "to": "app",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    }
+  }
+}

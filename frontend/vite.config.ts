@@ -13,7 +13,11 @@ export default defineConfig({
       "@tabler/icons-react": "@tabler/icons-react/dist/esm/icons/index.mjs",
     },
   },
+  // Allow Electron to load static assets via file:// protocol in production
+  base: "./",
   server: {
+    // Allow the Electron main process to connect to the dev server
+    cors: true,
     proxy: {
       // Proxy /uploads/* to backend so images load from same origin (no CORS issues)
       "/uploads": {
@@ -23,3 +27,4 @@ export default defineConfig({
     },
   },
 });
+

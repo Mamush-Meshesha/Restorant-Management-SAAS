@@ -6,10 +6,37 @@ export const create_reservation = async (req: AuthenticatedRequest, res: Respons
   try {
     const { table_id, customer_name, customer_phone, reservation_time, guest_count, special_requests } = req.body;
 
+    const isCustomer = req.user?.role_name?.toUpperCase() === 'CUSTOMER';
+    let customerId = undefined;
+    
+    if (isCustomer && req.user?.email) {
+      let customerRecord = await prisma.customer.findFirst({
+        where: { email: req.user.email }
+      });
+      
+      // Auto-create customer record if it doesn't exist for this authenticated user
+      if (!customerRecord && req.user) {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        customerRecord = await prisma.customer.create({
+          data: {
+            email: req.user.email,
+            first_name: user?.first_name || "Unknown",
+            last_name: user?.last_name || "",
+            phone: `auto_${Date.now()}`,
+            organization_id: req.user.organization_id,
+          }
+        });
+      }
+
+      if (customerRecord) {
+        customerId = customerRecord.id;
+      }
+    }
+
     const reservation = await prisma.reservation.create({
       data: {
         table_id,
-        customer_id: req.user?.role_name?.toUpperCase() === 'CUSTOMER' ? req.user.id : undefined,
+        customer_id: customerId,
         customer_name,
         customer_phone,
         reservation_time: new Date(reservation_time),
@@ -44,8 +71,32 @@ export const create_reservation = async (req: AuthenticatedRequest, res: Respons
 
 export const get_reservations = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    // In a real app filter by branch tables
+    const isCustomer = req.user?.role_name?.toUpperCase() === 'CUSTOMER';
+    const whereClause: any = {};
+    
+    if (isCustomer && req.user?.email) {
+      let customerRecord = await prisma.customer.findFirst({
+        where: { email: req.user.email }
+      });
+
+      if (!customerRecord && req.user) {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        customerRecord = await prisma.customer.create({
+          data: {
+            email: req.user.email,
+            first_name: user?.first_name || "Unknown",
+            last_name: user?.last_name || "",
+            phone: `auto_${Date.now()}`,
+            organization_id: req.user.organization_id,
+          }
+        });
+      }
+
+      whereClause.customer_id = customerRecord ? customerRecord.id : 'not_found';
+    }
+
     const reservations = await prisma.reservation.findMany({
+      where: whereClause,
       include: { table: true },
       orderBy: { reservation_time: 'asc' }
     });

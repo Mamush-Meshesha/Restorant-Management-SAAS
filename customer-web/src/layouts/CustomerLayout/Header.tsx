@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppSelector } from "../../redux/hooks";
 import { useEffect, useState } from "react";
 import { getNotificationsApi } from "../../api/notifications";
+import LiveActivityBanner from "./LiveActivityBanner";
 
 export default function Header() {
   const location = useLocation();
@@ -40,7 +41,7 @@ export default function Header() {
     { label: "Locations", path: "/locations" },
     { label: "Menu", path: "/menu" },
     { label: "Reservations", path: "/reservations" },
-    { label: "Account", path: "/login" },
+    { label: "Account", path: isAuthenticated ? "/account" : "/login" },
   ];
 
   const handleDrawerToggle = () => {
@@ -82,7 +83,8 @@ export default function Header() {
   );
 
   return (
-    <AppBar position="fixed">
+    <AppBar position="sticky" sx={{ top: 0, zIndex: 1100 }}>
+      <LiveActivityBanner />
       <Container maxWidth="xl">
         <Toolbar disableGutters sx={{ height: 80, justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>

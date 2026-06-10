@@ -7,6 +7,7 @@ import { ThemeProvider, CssBaseline } from '@mui/material'
 
 import { store, persistor } from './redux/store'
 import theme from './theme/theme'
+import './index.css'
 import App from './App.tsx'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

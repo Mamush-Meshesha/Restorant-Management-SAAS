@@ -54,7 +54,9 @@ export const update_kitchen_order_status = async (req: AuthenticatedRequest, res
 
 export const create_kitchen_station = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { branch_id, name } = req.body;
+    const isManager = req.user?.role_name === 'BRANCH_MANAGER';
+    const branch_id = isManager ? req.user?.branch_id : req.body.branch_id;
+    const { name } = req.body;
     const station = await prisma.kitchenStation.create({
       data: { branch_id, name }
     });
@@ -64,8 +66,10 @@ export const create_kitchen_station = async (req: AuthenticatedRequest, res: Res
 
 export const get_kitchen_stations = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { branchId } = req.query;
-    // In real app, must filter by organization/branch
+    const isManager = req.user?.role_name === 'BRANCH_MANAGER';
+    const branchId = isManager ? req.user?.branch_id : req.query.branchId;
+    
+    // Filter by branch
     const stations = await prisma.kitchenStation.findMany({
       where: branchId ? { branch_id: String(branchId) } : {},
       include: { branch: true }

@@ -76,3 +76,47 @@ export const get_customers = async (req: AuthenticatedRequest, res: Response, ne
     res.status(200).json({ data: formattedCustomers });
   } catch (error) { next(error); }
 };
+
+export const get_my_profile = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user || !req.user.email) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const customer = await prisma.customer.findFirst({
+      where: { email: req.user.email },
+      include: { 
+        tier: true,
+        orders: { select: { id: true, total_amount: true } },
+      }
+    });
+
+    if (!customer) {
+      const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+      // Fallback: If customer record not found for this user, return a default shell
+      return res.status(200).json({ 
+        data: {
+          first_name: user?.first_name || "Unknown",
+          last_name: user?.last_name || "",
+          email: req.user.email,
+          loyalty_points: 0,
+          total_visits: 0,
+          money_saved: 0,
+          tier: { name: "Bronze", min_points: 0 }
+        } 
+      });
+    }
+
+    // Calculate visits and spending
+    const total_visits = customer.orders.length;
+    const total_spent = customer.orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+
+    res.status(200).json({ 
+      data: {
+        ...customer,
+        total_visits,
+        total_spent,
+      } 
+    });
+  } catch (error) { next(error); }
+};

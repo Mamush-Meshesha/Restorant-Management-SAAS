@@ -7,7 +7,7 @@ export default function CustomerLayout() {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <Header />
-      <Box component="main" sx={{ flexGrow: 1, pt: "80px" }}>
+      <Box component="main" sx={{ flexGrow: 1 }}>
         <Outlet />
       </Box>
       <Footer />

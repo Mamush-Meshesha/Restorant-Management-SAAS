@@ -24,6 +24,10 @@ const TablesFloor = lazy(() => import("./views/tables/TablesFloor"));
 const QRGenerator = lazy(() => import("./views/settings/QRGenerator"));
 const MenuViewer = lazy(() => import("./views/public/MenuViewer"));
 
+// Enterprise QR
+const WaitlistDashboard = lazy(() => import("./views/dashboard/WaitlistDashboard"));
+const AttendanceQRGenerator = lazy(() => import("./views/dashboard/AttendanceQRGenerator"));
+
 // New Pages
 const ProfilePage = lazy(() => import("./views/profile/ProfilePage"));
 const AppSettingsPage = lazy(() => import("./views/settings/AppSettingsPage"));
@@ -69,7 +73,7 @@ function App() {
         
         {/* Public Menu QR Route */}
         <Route path="/menu/scan/:token" element={<MenuViewer />} />
-
+        
         {/* Protected Routes */}
         <Route element={<RequireAuth />}>
           <Route element={<FullLayout />}>
@@ -119,6 +123,8 @@ function App() {
               <Route path="/dining-areas" element={<DiningAreasPage />} />
               <Route path="/tables-manage" element={<TablesPage />} />
               <Route path="/kitchen-stations" element={<KitchenStationsPage />} />
+              <Route path="/waitlist" element={<WaitlistDashboard />} />
+              <Route path="/attendance/qr" element={<AttendanceQRGenerator />} />
             </Route>
 
             {/* Admin Only */}

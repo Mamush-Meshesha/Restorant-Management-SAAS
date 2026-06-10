@@ -67,6 +67,8 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   return res.status(500).json({ message: err.message });
 });
 
+import { initWebSockets } from "./socket";
+
 // Initiate the server
 const initApp = async () => {
   try {
@@ -76,7 +78,7 @@ const initApp = async () => {
     // Initialize system with default institute and user
     await InitService.initializeSystem();
 
-    app.listen(_CONFIG._VALS.PORT, () => {
+    const server = app.listen(_CONFIG._VALS.PORT, () => {
       console.log(
         JSON.stringify({
           status: "success",
@@ -84,6 +86,10 @@ const initApp = async () => {
         })
       );
     });
+
+    // Initialize WebSockets
+    initWebSockets(server);
+
   } catch (err) {
     console.error("Failed to load configuration and start the server:", err);
     process.exit(1);

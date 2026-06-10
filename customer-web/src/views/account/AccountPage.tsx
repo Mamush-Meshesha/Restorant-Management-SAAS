@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Box, Container, Typography, Grid, Stack, Button, alpha, Card, CardContent,
   Avatar, Tabs, Tab, Chip, LinearProgress, CardMedia, IconButton, CircularProgress
@@ -13,14 +13,7 @@ import { getReservationsApi } from "../../api/reservations";
 import { getMenuItemsApi } from "../../api/menu";
 import { getBranchesApi } from "../../api/branches";
 import { getNotificationsApi, markNotificationReadApi, Notification } from "../../api/notifications";
-
-const TIER_DATA = {
-  Bronze: { next: "Silver", color: "#cd7f32", progress: 60, points: 1200, required: 2000 },
-  Silver: { next: "Gold", color: "#aaa9ad", progress: 30, points: 3200, required: 10000 },
-  Gold: { next: "Platinum", color: "#d4af37", progress: 75, points: 7500, required: 10000 },
-};
-
-
+import { getMyProfileApi, CustomerProfile } from "../../api/customers";
 
 export default function AccountPage() {
   const dispatch = useAppDispatch();
@@ -33,33 +26,37 @@ export default function AccountPage() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchBaseData = async () => {
       setLoading(true);
       try {
-        const [oData, rData, mData, lData] = await Promise.all([
-          getOrdersApi().catch(() => []),
-          getReservationsApi().catch(() => []),
+        const [mData, lData, pData] = await Promise.all([
           getMenuItemsApi().catch(() => []),
           getBranchesApi().catch(() => []),
+          getMyProfileApi().catch(() => null),
         ]);
-        setOrders(oData);
-        setReservations(rData);
         setMenuItems(mData);
         setLocations(lData);
+        setProfile(pData);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchBaseData();
   }, []);
 
   useEffect(() => {
-    if (tab === 3) {
+    // Dynamically fetch tab-specific data to keep it fresh
+    if (tab === 0) {
+      getOrdersApi().then(setOrders).catch(console.error);
+    } else if (tab === 1) {
+      getReservationsApi().then(setReservations).catch(console.error);
+    } else if (tab === 3) {
       getNotificationsApi().then(setNotifications).catch(console.error);
     }
   }, [tab]);
@@ -73,15 +70,22 @@ export default function AccountPage() {
     }
   };
 
-  const tier = "Gold";
-  const tierInfo = TIER_DATA[tier as keyof typeof TIER_DATA];
+  const tier = profile?.tier?.name || "Bronze";
+  const points = profile?.loyalty_points || 0;
+  
+  const tierProgress = useMemo(() => {
+    if (tier === "Platinum") return { next: "Max Level", progress: 100, required: points, color: "#e5e4e2" };
+    if (tier === "Gold") return { next: "Platinum", progress: (points / 10000) * 100, required: 10000, color: "#d4af37" };
+    if (tier === "Silver") return { next: "Gold", progress: (points / 5000) * 100, required: 5000, color: "#aaa9ad" };
+    return { next: "Silver", progress: (points / 2000) * 100, required: 2000, color: "#cd7f32" };
+  }, [tier, points]);
 
   return (
     <Box sx={{ bgcolor: "background.default", minHeight: "100vh" }}>
       <Box sx={{ bgcolor: "primary.main", color: "white", py: 10 }}>
         <Container maxWidth="lg">
           <Stack direction={{ xs: "column", sm: "row" }} spacing={4} alignItems={{ xs: "center", sm: "flex-end" }}>
-            <Avatar sx={{ width: 100, height: 100, fontSize: "2.5rem", fontWeight: 700, bgcolor: alpha("#d4af37", 0.2), color: "secondary.main", border: `3px solid ${alpha("#d4af37", 0.4)}` }}>
+            <Avatar sx={{ width: 100, height: 100, fontSize: "2.5rem", fontWeight: 700, bgcolor: alpha(tierProgress.color, 0.2), color: "secondary.main", border: `3px solid ${alpha(tierProgress.color, 0.4)}` }}>
               {userProfile?.first_name?.[0] || ""}{userProfile?.last_name?.[0] || ""}
             </Avatar>
             <Box sx={{ textAlign: { xs: "center", sm: "left" } }}>
@@ -93,9 +97,9 @@ export default function AccountPage() {
               <Chip
                 icon={<IconMedal size={18} />}
                 label={`${tier} Member`}
-                sx={{ bgcolor: alpha(tierInfo.color, 0.15), color: tierInfo.color, fontWeight: 700, fontSize: "1rem", py: 2.5, px: 1, mb: 1, borderRadius: 2 }}
+                sx={{ bgcolor: alpha(tierProgress.color, 0.15), color: tierProgress.color, fontWeight: 700, fontSize: "1rem", py: 2.5, px: 1, mb: 1, borderRadius: 2 }}
               />
-              <Typography variant="caption" sx={{ display: "block", opacity: 0.7 }}>{tierInfo.points.toLocaleString()} Points</Typography>
+              <Typography variant="caption" sx={{ display: "block", opacity: 0.7 }}>{points.toLocaleString()} Points</Typography>
             </Box>
           </Stack>
         </Container>
@@ -108,31 +112,31 @@ export default function AccountPage() {
               <Grid container spacing={4} alignItems="center">
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.6)", letterSpacing: "0.15em" }}>Loyalty Progress</Typography>
-                  <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5 }}>{tier} → {tierInfo.next}</Typography>
+                  <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5 }}>{tier} → {tierProgress.next}</Typography>
                   <Typography variant="body2" sx={{ opacity: 0.7, mb: 3 }}>
-                    {(tierInfo.required - tierInfo.points).toLocaleString()} more points to reach {tierInfo.next}
+                    {tier === "Platinum" ? "You have reached the maximum tier!" : `${(tierProgress.required - points).toLocaleString()} more points to reach ${tierProgress.next}`}
                   </Typography>
                   <LinearProgress
                     variant="determinate"
-                    value={(tierInfo.points / tierInfo.required) * 100}
-                    sx={{ height: 10, borderRadius: 5, bgcolor: alpha("#fff", 0.1), "& .MuiLinearProgress-bar": { bgcolor: tierInfo.color, borderRadius: 5 } }}
+                    value={Math.min(tierProgress.progress, 100)}
+                    sx={{ height: 10, borderRadius: 5, bgcolor: alpha("#fff", 0.1), "& .MuiLinearProgress-bar": { bgcolor: tierProgress.color, borderRadius: 5 } }}
                   />
                   <Stack direction="row" justifyContent="space-between" mt={1}>
                     <Typography variant="caption" sx={{ opacity: 0.6 }}>0</Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.6 }}>{tierInfo.required.toLocaleString()}</Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.6 }}>{tierProgress.required.toLocaleString()}</Typography>
                   </Stack>
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Grid container spacing={2}>
                     {[
-                      { label: "Available Points", value: tierInfo.points.toLocaleString() },
-                      { label: "Lifetime Visits", value: "23" },
-                      { label: "Rewards Used", value: "5" },
-                      { label: "Money Saved", value: "$140" },
+                      { label: "Available Points", value: points.toLocaleString() },
+                      { label: "Lifetime Visits", value: profile?.total_visits || 0 },
+                      { label: "Rewards Used", value: "0" },
+                      { label: "Money Spent", value: `$${profile?.total_spent?.toFixed(2) || "0.00"}` },
                     ].map((stat) => (
                       <Grid size={6} key={stat.label}>
                         <Box sx={{ p: 2, bgcolor: alpha("#fff", 0.05), borderRadius: 2 }}>
-                          <Typography variant="h5" fontWeight={700} sx={{ color: tierInfo.color }}>{stat.value}</Typography>
+                          <Typography variant="h5" fontWeight={700} sx={{ color: tierProgress.color }}>{stat.value}</Typography>
                           <Typography variant="caption" sx={{ opacity: 0.7 }}>{stat.label}</Typography>
                         </Box>
                       </Grid>

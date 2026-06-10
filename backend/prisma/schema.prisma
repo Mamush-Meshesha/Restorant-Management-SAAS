@@ -46,6 +46,8 @@ model Branch {
   email           String?
   latitude        Float?
   longitude       Float?
+  wifi_ip         String? // The public IP address of the restaurant's WiFi network
+  qr_secret_key   String? // A secret key to generate rolling TOTP QR codes
   is_active       Boolean  @default(true)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
@@ -340,8 +342,35 @@ model Table {
   orders       Order[]
   reservations Reservation[]
   menuQRCodes  MenuQRCode[]
+  sessions     TableSession[]
 
   @@map("tables")
+}
+
+model TableSession {
+  id         String   @id @default(uuid())
+  table_id   String
+  status     String   @default("OPEN") // OPEN, CLOSED
+  token      String   @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  table Table @relation(fields: [table_id], references: [id])
+  guests TableSessionGuest[]
+
+  @@map("table_sessions")
+}
+
+model TableSessionGuest {
+  id               String   @id @default(uuid())
+  table_session_id String
+  customer_id      String
+  joined_at        DateTime @default(now())
+
+  session  TableSession @relation(fields: [table_session_id], references: [id])
+  customer Customer     @relation(fields: [customer_id], references: [id])
+
+  @@map("table_session_guests")
 }
 
 model Reservation {
@@ -415,13 +444,17 @@ model OrderItem {
   quantity     Int      @default(1)
   unit_price   Float
   total_price  Float
-  status       String   @default("PENDING") // PENDING, PREPARING, READY, SERVED
-  notes        String?
-  created_at   DateTime @default(now())
+  status           String   @default("PENDING") // PENDING, PREPARING, READY, SERVED
+  notes            String?
+  ordered_by_id    String?
+  paid_by_id       String?
+  created_at       DateTime @default(now())
 
   order    Order            @relation(fields: [order_id], references: [id], onDelete: Cascade)
   menuItem MenuItem         @relation(fields: [menu_item_id], references: [id])
   variant  MenuItemVariant? @relation(fields: [variant_id], references: [id])
+  orderedBy Customer?       @relation("OrderedItems", fields: [ordered_by_id], references: [id])
+  paidBy    Customer?       @relation("PaidItems", fields: [paid_by_id], references: [id])
 
   addons        OrderItemAddon[]
   kitchenOrders KitchenOrder[]
@@ -678,6 +711,10 @@ model Customer {
   orders         Order[]
   reservations   Reservation[]
   loyaltyHistory LoyaltyTransaction[]
+  
+  itemsOrdered  OrderItem[] @relation("OrderedItems")
+  itemsPaid     OrderItem[] @relation("PaidItems")
+  tableSessions TableSessionGuest[]
 
   @@map("customers")
 }
@@ -808,8 +845,11 @@ model StaffAttendance {
   branch_id   String
   date        DateTime
   clock_in    DateTime?
-  clock_out   DateTime?
-  status      String    @default("PRESENT") // PRESENT, LATE, ABSENT
+  clock_out      DateTime?
+  status         String    @default("PRESENT") // PRESENT, LATE, ABSENT
+  clock_in_ip    String?
+  clock_in_lat   Float?
+  clock_in_lng   Float?
 
   employee Employee @relation(fields: [employee_id], references: [id])
   branch   Branch   @relation(fields: [branch_id], references: [id])

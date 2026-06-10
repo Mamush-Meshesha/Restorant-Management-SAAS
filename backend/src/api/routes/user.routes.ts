@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import * as controller from '../../controller/user.controller';
-import { extractInstituteData } from '../../middleware/institute.middleware';
+import { extractInstituteData, requireRole } from '../../middleware/institute.middleware';
 
 const router = Router();
-router.post('/', extractInstituteData, controller.create_user);
-router.get('/', extractInstituteData, controller.get_users);
+router.post('/', extractInstituteData, requireRole('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'), controller.create_user);
+router.get('/', extractInstituteData, requireRole('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'), controller.get_users);
 
 export default router;

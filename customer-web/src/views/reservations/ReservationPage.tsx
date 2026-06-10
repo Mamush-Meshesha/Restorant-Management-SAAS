@@ -86,13 +86,18 @@ export default function ReservationPage() {
         throw new Error("No tables available for your party size.");
       }
 
-      // Format ISO time
-      const dateObj = new Date(`${date}T${time.replace(" PM", ":00").replace(" AM", ":00")}`);
-      if (time.includes("PM") && !time.startsWith("12")) {
-        dateObj.setHours(dateObj.getHours() + 12);
-      } else if (time.startsWith("12") && time.includes("AM")) {
-        dateObj.setHours(0);
+      // Safer Date parsing avoiding strict ISO string formatting issues
+      const [year, month, day] = date.split("-").map(Number);
+      const [timeParts, modifier] = time.split(" ");
+      let [hours, minutes] = timeParts.split(":").map(Number);
+      
+      if (modifier === "PM" && hours !== 12) {
+        hours += 12;
+      } else if (modifier === "AM" && hours === 12) {
+        hours = 0;
       }
+
+      const dateObj = new Date(year, month - 1, day, hours, minutes, 0);
 
       await createReservationApi({
         table_id: suitableTable.id,

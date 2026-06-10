@@ -22,6 +22,8 @@ import uploadRoutes from "./routes/upload.routes";
 import billingRoutes from "./routes/billing.routes";
 import notificationRoutes from "./routes/notification.routes";
 import messageRoutes from "./routes/message.routes";
+import sessionRoutes from "./routes/session.routes";
+import waitlistRoutes from "./routes/waitlist.routes";
 
 export default (app: Application) => {
   app.use("/api/v1/auth", authRoutes);
@@ -47,4 +49,6 @@ export default (app: Application) => {
   app.use("/api/v1/billing", billingRoutes);
   app.use("/api/v1/notification", notificationRoutes);
   app.use("/api/v1/message", messageRoutes);
+  app.use("/api/v1/session", sessionRoutes);
+  app.use("/api/v1/waitlist", waitlistRoutes);
 };

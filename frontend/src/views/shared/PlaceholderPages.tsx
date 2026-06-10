@@ -1,4 +1,7 @@
 import React from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/redux/store";
+import type { AppRole } from "@/config/roles";
 import DataTablePage, { renderStatusPill } from "./DataTablePage";
 import { getOrders, cancelOrder } from "@/api/_orders";
 import { getCategories, createCategory, updateCategory, deleteCategory, getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/api/_menu";
@@ -11,6 +14,18 @@ import { getCustomers, createCustomer } from "@/api/_customer";
 import { getReservations, createReservation, updateReservationStatus } from "@/api/_reservations";
 import { getKitchenStations, createKitchenStation, updateKitchenStation, deleteKitchenStation } from "@/api/_kitchenStations";
 import { getDiningAreas, createDiningArea, updateDiningArea, deleteDiningArea, getTables, createTable, updateTable, deleteTable } from "@/api/_tables";
+
+// RBAC Helper Hook
+const useRoleAccess = () => {
+  const roleName = useSelector((state: RootState) => state.auth.currentUser?.role?.name) as AppRole | undefined;
+  return {
+    isSuperAdmin: roleName === "SUPERADMIN",
+    isCompanyAdmin: roleName === "COMPANY_ADMIN",
+    isManager: roleName === "BRANCH_MANAGER",
+    isAdminOrManager: ["SUPERADMIN", "COMPANY_ADMIN", "BRANCH_MANAGER"].includes(roleName || ""),
+    roleName
+  };
+};
 
 // Reusable column definitions
 
@@ -26,37 +41,41 @@ const activeStatusCol = {
 
 // ─── ORDERS ─────────────────────────────────────────────────────────────────
 
-export const OrdersPage = () => (
-  <DataTablePage
-    config={{
-      title: "Orders",
-      description: "All restaurant orders",
-      noun: "Order",
-      columns: [
-        { field: "order_number", headerName: "Order #", width: 140 },
-        { field: "order_type", headerName: "Type", width: 120 },
-        { field: "table_name", headerName: "Table", width: 120,
-          valueGetter: (p: any) => p?.row?.table?.name || "Takeaway" },
-        { field: "items_count", headerName: "Items", width: 80,
-          valueGetter: (p: any) => (p?.row?.items?.length ?? 0) },
-        { field: "total_amount", headerName: "Total", width: 120,
-          valueFormatter: (v: any) => `$${Number(v || 0).toFixed(2)}` },
-        { field: "status", headerName: "Status", width: 140, renderCell: renderStatusPill },
-        { field: "created_at", headerName: "Date", flex: 1,
-          valueFormatter: (v: any) => v ? new Date(v).toLocaleString() : "" },
-        actionCol,
-      ],
-      fetchFn: () => getOrders({ limit: 100 }),
-      deleteFn: (id) => cancelOrder(id),
-      transformFn: (raw) => (raw.data ?? []).map((o: any) => ({
-        ...o,
-        id: o.id,
-        table_name: o.table?.name || "Takeaway",
-        items_count: o.items?.length ?? 0,
-      })),
-    }}
-  />
-);
+export const OrdersPage = () => {
+  const { isAdminOrManager } = useRoleAccess();
+  
+  return (
+    <DataTablePage
+      config={{
+        title: "Orders",
+        description: "All restaurant orders",
+        noun: "Order",
+        columns: [
+          { field: "order_number", headerName: "Order #", width: 140 },
+          { field: "order_type", headerName: "Type", width: 120 },
+          { field: "table_name", headerName: "Table", width: 120,
+            valueGetter: (p: any) => p?.row?.table?.name || "Takeaway" },
+          { field: "items_count", headerName: "Items", width: 80,
+            valueGetter: (p: any) => (p?.row?.items?.length ?? 0) },
+          { field: "total_amount", headerName: "Total", width: 120,
+            valueFormatter: (v: any) => `$${Number(v || 0).toFixed(2)}` },
+          { field: "status", headerName: "Status", width: 140, renderCell: renderStatusPill },
+          { field: "created_at", headerName: "Date", flex: 1,
+            valueFormatter: (v: any) => v ? new Date(v).toLocaleString() : "" },
+          actionCol,
+        ],
+        fetchFn: () => getOrders({ limit: 100 }),
+        deleteFn: isAdminOrManager ? (id) => cancelOrder(id) : undefined,
+        transformFn: (raw) => (raw.data ?? []).map((o: any) => ({
+          ...o,
+          id: o.id,
+          table_name: o.table?.name || "Takeaway",
+          items_count: o.items?.length ?? 0,
+        })),
+      }}
+    />
+  );
+};
 
 // ─── RESERVATIONS ────────────────────────────────────────────────────────────
 
@@ -195,6 +214,8 @@ export const TablesPage = () => {
 
 export const KitchenStationsPage = () => {
   const [branches, setBranches] = React.useState<{label: string, value: string}[]>([]);
+  const { isAdminOrManager } = useRoleAccess();
+
   React.useEffect(() => {
     getBranches().then(res => setBranches((res.data?.data || []).map((b: any) => ({ label: b.name, value: b.id })))).catch(console.error);
   }, []);
@@ -211,9 +232,9 @@ export const KitchenStationsPage = () => {
           actionCol,
         ],
         fetchFn: getKitchenStations,
-        createFn: createKitchenStation,
-        updateFn: updateKitchenStation,
-        deleteFn: deleteKitchenStation,
+        createFn: isAdminOrManager ? createKitchenStation : undefined,
+        updateFn: isAdminOrManager ? updateKitchenStation : undefined,
+        deleteFn: isAdminOrManager ? deleteKitchenStation : undefined,
         transformFn: (raw) => raw.data ?? [],
         formSchema: [
           { field: "name", label: "Station Name", required: true },
@@ -228,6 +249,7 @@ export const KitchenStationsPage = () => {
 
 export const CategoriesPage = () => {
   const [categories, setCategories] = React.useState<{label: string, value: string}[]>([]);
+  const { isAdminOrManager } = useRoleAccess();
   
   React.useEffect(() => {
     getCategories().then(res => {
@@ -272,9 +294,9 @@ export const CategoriesPage = () => {
           actionCol,
         ],
         fetchFn: getCategories,
-        createFn: createCategory,
-        updateFn: updateCategory,
-        deleteFn: deleteCategory,
+        createFn: isAdminOrManager ? createCategory : undefined,
+        updateFn: isAdminOrManager ? updateCategory : undefined,
+        deleteFn: isAdminOrManager ? deleteCategory : undefined,
         transformFn: (raw) => {
           // Flatten the hierarchy for the table view
           const flatten = (cats: any[], parentName = "", level = 0): any[] => {
@@ -305,6 +327,8 @@ export const CategoriesPage = () => {
 
 export const MenuItemsPage = () => {
   const [categories, setCategories] = React.useState<{label: string, value: string}[]>([]);
+  const { isAdminOrManager } = useRoleAccess();
+
   React.useEffect(() => {
     getCategories().then(res => {
       setCategories((res.data?.data || []).map((c: any) => ({ label: c.name, value: c.id })));
@@ -325,9 +349,9 @@ export const MenuItemsPage = () => {
           actionCol,
         ],
         fetchFn: getMenuItems,
-        createFn: createMenuItem,
-        updateFn: updateMenuItem,
-        deleteFn: deleteMenuItem,
+        createFn: isAdminOrManager ? createMenuItem : undefined,
+        updateFn: isAdminOrManager ? updateMenuItem : undefined,
+        deleteFn: isAdminOrManager ? deleteMenuItem : undefined,
         transformFn: (raw) =>
           (raw.data ?? []).map((i: any) => ({
             ...i,
@@ -487,9 +511,13 @@ export const DeliveryPage = () => (
 
 export const EmployeesPage = () => {
   const [roles, setRoles] = React.useState<{label: string, value: string}[]>([]);
+  const [branches, setBranches] = React.useState<{label: string, value: string}[]>([]);
   React.useEffect(() => {
     getAllRoles().then(res => {
       setRoles((res.data?.data || []).map((r: any) => ({ label: r.name, value: r.id || r.role_id })));
+    }).catch(console.error);
+    getBranches().then(res => {
+      setBranches((res.data?.data || []).map((b: any) => ({ label: b.name, value: b.id })));
     }).catch(console.error);
   }, []);
 
@@ -503,6 +531,7 @@ export const EmployeesPage = () => {
           nameCol,
           { field: "email", headerName: "Email", flex: 1 },
           { field: "role_name", headerName: "Role", width: 160 },
+          { field: "branch_name", headerName: "Branch", width: 160 },
           activeStatusCol,
           actionCol,
         ],
@@ -515,6 +544,7 @@ export const EmployeesPage = () => {
             ...u,
             name: `${u.first_name} ${u.last_name}`,
             role_name: u.role?.name ?? u.role?.role_name ?? "—",
+            branch_name: u.branch?.name ?? "—",
           })),
         formSchema: [
           { field: "first_name", label: "First Name", required: true },
@@ -523,6 +553,7 @@ export const EmployeesPage = () => {
           { field: "username", label: "Username", required: true },
           { field: "password", label: "Password", type: "password" },
           { field: "role_id", label: "Role", required: true, options: roles.length ? roles : undefined },
+          { field: "branch_id", label: "Branch", required: true, options: branches.length ? branches : undefined },
         ],
       }}
     />
@@ -616,65 +647,77 @@ export const TransactionsPage = () => (
 
 // ─── BRANCHES ────────────────────────────────────────────────────────────────
 
-export const BranchesPage = () => (
-  <DataTablePage
-    config={{
-      title: "Branches",
-      description: "Location management",
-      noun: "Branch",
-      columns: [nameCol,
-        { field: "code", headerName: "Code", width: 120 },
-        { field: "address", headerName: "Address", flex: 1 },
-        { field: "phone", headerName: "Phone", width: 140 },
-        activeStatusCol,
-        actionCol,
-      ],
-      fetchFn: getBranches,
-      createFn: createBranch,
-      updateFn: (id, data) => updateBranch(id, data),
-      transformFn: (raw) => raw.data ?? [],
-      formSchema: [
-        { field: "name", label: "Branch Name", required: true },
-        { field: "code", label: "Branch Code", required: true },
-        { field: "address", label: "Address" },
-        { field: "phone", label: "Phone" },
-        { field: "email", label: "Email", type: "email" },
-      ],
-    }}
-  />
-);
+export const BranchesPage = () => {
+  const { isSuperAdmin, isCompanyAdmin } = useRoleAccess();
+  const canManage = isSuperAdmin || isCompanyAdmin;
+
+  return (
+    <DataTablePage
+      config={{
+        title: "Branches",
+        description: "Location management",
+        noun: "Branch",
+        columns: [nameCol,
+          { field: "code", headerName: "Code", width: 120 },
+          { field: "address", headerName: "Address", flex: 1 },
+          { field: "phone", headerName: "Phone", width: 140 },
+          activeStatusCol,
+          actionCol,
+        ],
+        fetchFn: getBranches,
+        createFn: canManage ? createBranch : undefined,
+        updateFn: canManage ? (id, data) => updateBranch(id, data) : undefined,
+        transformFn: (raw) => raw.data ?? [],
+        formSchema: [
+          { field: "name", label: "Branch Name", required: true },
+          { field: "code", label: "Branch Code", required: true },
+          { field: "address", label: "Address" },
+          { field: "phone", label: "Phone" },
+          { field: "email", label: "Email", type: "email" },
+        ],
+      }}
+    />
+  );
+};
 
 // ─── ROLES ────────────────────────────────────────────────────────────────────
 
-export const RolesPage = () => (
-  <DataTablePage
-    config={{
-      title: "Roles & Permissions",
-      description: "Access control",
-      noun: "Role",
-      columns: [
-        { field: "id", headerName: "ID", width: 140 },
-        nameCol,
-        { field: "description", headerName: "Description", flex: 1 },
-        actionCol,
-      ],
-      fetchFn: getAllRoles,
-      createFn: (data) => createRole({ name: data.name, description: data.description }),
-      updateFn: (id, data) => updateRole(id, { name: data.name, description: data.description }),
-      deleteFn: deleteRole,
-      transformFn: (raw) => (raw.roles ?? raw.data ?? []).map((r: any) => ({ id: r.id, name: r.name, description: r.description ?? "—" })),
-      formSchema: [
-        { field: "name", label: "Role Name", required: true },
-        { field: "description", label: "Description" },
-      ],
-    }}
-  />
-);
+export const RolesPage = () => {
+  const { isSuperAdmin, isCompanyAdmin } = useRoleAccess();
+  const canManage = isSuperAdmin || isCompanyAdmin;
+
+  return (
+    <DataTablePage
+      config={{
+        title: "Roles & Permissions",
+        description: "Access control",
+        noun: "Role",
+        columns: [
+          { field: "id", headerName: "ID", width: 140 },
+          nameCol,
+          { field: "description", headerName: "Description", flex: 1 },
+          actionCol,
+        ],
+        fetchFn: getAllRoles,
+        createFn: canManage ? (data) => createRole({ name: data.name, description: data.description }) : undefined,
+        updateFn: canManage ? (id, data) => updateRole(id, { name: data.name, description: data.description }) : undefined,
+        deleteFn: canManage ? deleteRole : undefined,
+        transformFn: (raw) => (raw.roles ?? raw.data ?? []).map((r: any) => ({ id: r.id, name: r.name, description: r.description ?? "—" })),
+        formSchema: [
+          { field: "name", label: "Role Name", required: true },
+          { field: "description", label: "Description" },
+        ],
+      }}
+    />
+  );
+};
 
 // ─── USERS ────────────────────────────────────────────────────────────────────
 
 export const UsersPage = () => {
   const [roles, setRoles] = React.useState<{label: string, value: string}[]>([]);
+  const { isAdminOrManager } = useRoleAccess();
+
   React.useEffect(() => {
     getAllRoles().then(res => {
       setRoles((res.data?.data || []).map((r: any) => ({ label: r.name, value: r.id || r.role_id })));
@@ -696,14 +739,15 @@ export const UsersPage = () => {
           actionCol,
         ],
         fetchFn: getUsers,
-        createFn: createUser,
-        updateFn: (id, data) => updateUser(id, data),
-        deleteFn: deleteUser,
+        createFn: isAdminOrManager ? createUser : undefined,
+        updateFn: isAdminOrManager ? (id, data) => updateUser(id, data) : undefined,
+        deleteFn: isAdminOrManager ? deleteUser : undefined,
         transformFn: (raw) =>
           (raw.data ?? []).map((u: any) => ({
             ...u,
             name: `${u.first_name} ${u.last_name}`,
             role_name: u.role?.name ?? u.role?.role_name ?? "—",
+            branch_name: u.branch?.name ?? "—",
           })),
         formSchema: [
           { field: "first_name", label: "First Name", required: true },

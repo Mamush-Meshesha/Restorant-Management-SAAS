@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/institute.middleware';
+import { getDistanceFromLatLonInMeters } from '../utils/distance';
 
 export const clock_in = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -31,5 +32,62 @@ export const clock_out = async (req: AuthenticatedRequest, res: Response, next: 
     });
 
     res.status(200).json({ message: "Clocked out successfully", data: attendance });
+  } catch (error) { next(error); }
+};
+
+export const clock_in_qr = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const employeeId = req.user?.id;
+    const { branch_id, token, lat, lng } = req.body;
+    const clientIp = req.ip || req.connection.remoteAddress;
+
+    // In a real app, validate that `token` is the current rolling QR token for the branch.
+    if (!token) return res.status(400).json({ message: "QR token required" });
+
+    // Fetch branch to get its coordinates and WiFi IP
+    const branch = await prisma.branch.findUnique({ where: { id: branch_id } });
+    if (!branch) return res.status(404).json({ message: "Branch not found" });
+
+    let isLocationValid = false;
+
+    // 1. IP Network Whitelisting (The most secure check)
+    // If the employee is connected to the restaurant's WiFi, we know they are physically there.
+    if (branch.wifi_ip && clientIp === branch.wifi_ip) {
+      isLocationValid = true;
+    }
+
+    // 2. GPS Fallback (Prone to spoofing, but good if WiFi IP isn't set up)
+    if (!isLocationValid && branch.latitude && branch.longitude && lat && lng) {
+      const distance = getDistanceFromLatLonInMeters(
+        branch.latitude, branch.longitude,
+        parseFloat(lat), parseFloat(lng)
+      );
+
+      // If distance <= 100 meters, they pass the GPS check
+      if (distance <= 100) {
+        isLocationValid = true;
+      }
+    }
+
+    if (!isLocationValid) {
+      return res.status(403).json({
+        message: "Clock-in rejected. You must be connected to the restaurant WiFi or be within the GPS geofence."
+      });
+    }
+
+    const attendance = await prisma.staffAttendance.create({
+      data: {
+        employee_id: employeeId!,
+        branch_id,
+        date: new Date(),
+        clock_in: new Date(),
+        status: 'PRESENT',
+        clock_in_ip: clientIp,
+        clock_in_lat: lat ? parseFloat(lat) : null,
+        clock_in_lng: lng ? parseFloat(lng) : null
+      }
+    });
+
+    res.status(201).json({ message: "Geofenced Clock-In successful", data: attendance });
   } catch (error) { next(error); }
 };

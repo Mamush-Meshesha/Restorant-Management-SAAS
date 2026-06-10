@@ -22,6 +22,8 @@ import {
   IconMotorbike,
   IconStar,
   IconCreditCard,
+  IconListCheck,
+  IconFingerprint,
 } from "@tabler/icons-react";
 import { uniqueId } from "lodash";
 import type { NavHeaderItemType, NavItemType } from "./NavItem";
@@ -67,6 +69,14 @@ const Menuitems: SidebarMenuItem[] = [
     href: "/orders",
     disabled: false,
     roles: [...MANAGER_ROLES, "CASHIER"],
+  },
+  {
+    id: uniqueId(),
+    title: "Waitlist",
+    icon: IconListCheck,
+    href: "/waitlist",
+    disabled: false,
+    roles: [...MANAGER_ROLES],
   },
   {
     id: uniqueId(),
@@ -212,6 +222,14 @@ const Menuitems: SidebarMenuItem[] = [
     title: "Attendance",
     icon: IconCalendarEvent,
     href: "/attendance",
+    disabled: false,
+    roles: [...ADMIN_ROLES, "BRANCH_MANAGER"],
+  },
+  {
+    id: uniqueId(),
+    title: "Staff Clock-In QR",
+    icon: IconFingerprint,
+    href: "/attendance/qr",
     disabled: false,
     roles: [...ADMIN_ROLES, "BRANCH_MANAGER"],
   },

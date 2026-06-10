@@ -276,14 +276,16 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
             >
               Export
             </Button>
-            <Button
-              variant="contained"
-              startIcon={<IconPlus size={18} />}
-              onClick={handleOpenAdd}
-              sx={{ boxShadow: "none", "&:hover": { boxShadow: "none" } }}
-            >
-              Add {config.noun}
-            </Button>
+            {config.createFn && (
+              <Button
+                variant="contained"
+                startIcon={<IconPlus size={18} />}
+                onClick={handleOpenAdd}
+                sx={{ boxShadow: "none", "&:hover": { boxShadow: "none" } }}
+              >
+                Add {config.noun}
+              </Button>
+            )}
           </Stack>
         </Stack>
 
@@ -402,17 +404,21 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
           <IconEye size={16} style={{ marginRight: 12 }} color={theme.palette.text.secondary} />
           View Details
         </MenuItem>
-        <MenuItem onClick={handleOpenEdit} sx={{ py: 1.5, px: 2, fontSize: "0.875rem" }}>
-          <IconEdit size={16} style={{ marginRight: 12 }} color={theme.palette.text.secondary} />
-          Edit {config.noun}
-        </MenuItem>
-        <MenuItem
-          onClick={handleOpenDelete}
-          sx={{ py: 1.5, px: 2, fontSize: "0.875rem", color: theme.palette.error.main }}
-        >
-          <IconTrash size={16} style={{ marginRight: 12 }} color={theme.palette.error.main} />
-          Delete {config.noun}
-        </MenuItem>
+        {config.updateFn && (
+          <MenuItem onClick={handleOpenEdit} sx={{ py: 1.5, px: 2, fontSize: "0.875rem" }}>
+            <IconEdit size={16} style={{ marginRight: 12 }} color={theme.palette.text.secondary} />
+            Edit {config.noun}
+          </MenuItem>
+        )}
+        {config.deleteFn && (
+          <MenuItem
+            onClick={handleOpenDelete}
+            sx={{ py: 1.5, px: 2, fontSize: "0.875rem", color: theme.palette.error.main }}
+          >
+            <IconTrash size={16} style={{ marginRight: 12 }} color={theme.palette.error.main} />
+            Delete {config.noun}
+          </MenuItem>
+        )}
       </Menu>
 
       {/* Add/Edit Dialog */}

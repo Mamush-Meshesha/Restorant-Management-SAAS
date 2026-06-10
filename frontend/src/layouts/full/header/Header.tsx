@@ -25,6 +25,7 @@ import { Helmet } from "react-helmet";
 import Profile from "./Profile";
 import Notifications from "./Notifications";
 import { useAppSelector } from "@/hooks/auth";
+import ClockInScanner from "@/components/ClockInScanner";
 
 const Header = ({
   toggleMobileSidebar,
@@ -354,6 +355,9 @@ const Header = ({
               spacing={{ xs: 0.5, sm: 1 }}
               sx={{ flexShrink: 0 }}
             >
+              {/* Clock In Scanner */}
+              <ClockInScanner />
+
               {/* Notifications */}
               <Notifications />
 

@@ -12,12 +12,18 @@ import {
   Grid
 } from '@mui/material';
 import { QrCode, Printer } from 'lucide-react';
-import api from '../../api/index';
+// Removed unused api import
 import { toast } from 'react-toastify';
 
+import { QRCodeSVG } from 'qrcode.react';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/redux/store';
+
 export default function QRGenerator() {
+  const branchId = useSelector((state: RootState) => state.auth.currentUser?.branch_id) || "branch-1";
+  const [qrType, setQrType] = useState('menu');
   const [loading, setLoading] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [qrCodeData, setQrCodeData] = useState('');
   const [selectedTable, setSelectedTable] = useState('');
 
   // Mock tables for now. In real app, fetch from API.
@@ -27,15 +33,25 @@ export default function QRGenerator() {
     { id: 't3', name: 'Table 3 - Patio' },
   ];
 
-  const generateMenuQR = async () => {
+  const generateQR = async () => {
     setLoading(true);
     try {
-      const response = await api.post(`/qr/menu`, {
-        branchId: 'MOCK_BRANCH_ID', // Usually from context/auth
-        tableId: selectedTable || undefined
-      });
+      const baseUrl = import.meta.env.VITE_CUSTOMER_URL || "http://localhost:3001";
+      let targetUrl = '';
+
+      if (qrType === 'waitlist') {
+        targetUrl = `${baseUrl}/waitlist/join/${branchId}`;
+      } else if (qrType === 'session') {
+        // Mock session token for demo. In real app, this is fetched from backend.
+        const mockSessionToken = `tbl-${selectedTable || 'general'}-${Math.random().toString(36).substring(7)}`;
+        targetUrl = `${baseUrl}/session/${mockSessionToken}`;
+      } else {
+        // Menu QR
+        const token = `menu-${selectedTable || 'general'}`;
+        targetUrl = `${baseUrl}/menu/scan/${token}`;
+      }
       
-      setQrCodeUrl(response.data.data.qrCodeDataUrl);
+      setQrCodeData(targetUrl);
       toast.success('QR Code generated successfully');
     } catch (error) {
       console.error(error);
@@ -46,6 +62,13 @@ export default function QRGenerator() {
   };
 
   const handlePrint = () => {
+    const svgElement = document.getElementById("qr-svg");
+    if (!svgElement) {
+      toast.error("QR Code not found");
+      return;
+    }
+
+    const svgData = new XMLSerializer().serializeToString(svgElement);
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
@@ -55,20 +78,23 @@ export default function QRGenerator() {
             <style>
               body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; flex-direction: column; }
               .card { border: 2px solid #333; padding: 20px; border-radius: 12px; text-align: center; }
-              img { max-width: 300px; }
+              svg { max-width: 300px; max-height: 300px; }
               h1 { margin-top: 20px; color: #8b0000; }
               p { color: #666; }
             </style>
           </head>
           <body>
             <div class="card">
-              <img src="${qrCodeUrl}" />
-              <h1>Scan for Menu</h1>
-              <p>Point your camera at the QR code to view our digital menu and place an order.</p>
+              ${svgData}
+              <h1>Scan for Access</h1>
+              <p>Point your camera at the QR code.</p>
               ${selectedTable ? `<p><strong>${tables.find(t => t.id === selectedTable)?.name}</strong></p>` : ''}
             </div>
             <script>
-              window.onload = () => { window.print(); window.close(); }
+              // Wait a brief moment to ensure SVG is fully rendered before triggering print
+              setTimeout(() => {
+                window.print();
+              }, 500);
             </script>
           </body>
         </html>
@@ -88,8 +114,21 @@ export default function QRGenerator() {
           <Card sx={{ p: 2, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
             <CardContent>
               <Typography variant="h6" mb={3} display="flex" alignItems="center" gap={1}>
-                <QrCode /> Generate Menu QR
+                <QrCode /> Generate Enterprise QR
               </Typography>
+              
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel>QR Type</InputLabel>
+                <Select
+                  value={qrType}
+                  label="QR Type"
+                  onChange={(e) => setQrType(e.target.value)}
+                >
+                  <MenuItem value="menu">Digital Menu</MenuItem>
+                  <MenuItem value="waitlist">Waitlist Sign-Up</MenuItem>
+                  <MenuItem value="session">Live Table Session (Ordering)</MenuItem>
+                </Select>
+              </FormControl>
               
               <FormControl fullWidth sx={{ mb: 3 }}>
                 <InputLabel>Table (Optional)</InputLabel>
@@ -109,7 +148,7 @@ export default function QRGenerator() {
                 variant="contained" 
                 fullWidth 
                 size="large"
-                onClick={generateMenuQR}
+                onClick={generateQR}
                 disabled={loading}
                 sx={{ 
                   bgcolor: '#1e293b', 
@@ -124,7 +163,7 @@ export default function QRGenerator() {
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          {qrCodeUrl && (
+          {qrCodeData && (
             <Card sx={{ p: 2, borderRadius: 3, textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
               <CardContent>
                 <Typography variant="h6" mb={2}>Generated QR Code</Typography>
@@ -137,7 +176,13 @@ export default function QRGenerator() {
                     bgcolor: '#fff'
                   }}
                 >
-                  <img src={qrCodeUrl} alt="Menu QR Code" style={{ maxWidth: '250px' }} />
+                  <QRCodeSVG 
+                    id="qr-svg"
+                    value={qrCodeData} 
+                    size={256} 
+                    level={"H"} 
+                    includeMargin={true}
+                  />
                 </Box>
                 <Box mt={3}>
                   <Button 

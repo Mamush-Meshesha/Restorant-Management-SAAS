@@ -15,6 +15,12 @@ import ForgotPasswordPage from "./views/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./views/auth/ResetPasswordPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
+// QR Mobile Views
+import { WaitlistJoin } from "./views/public/WaitlistJoin";
+import { WaitlistStatus } from "./views/public/WaitlistStatus";
+import TableSessionMenu from "./views/public/TableSessionMenu";
+import { StaffClockIn } from "./views/public/StaffClockIn";
+
 function App() {
   return (
     <Routes>
@@ -35,6 +41,12 @@ function App() {
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
       </Route>
+
+      {/* Standalone Mobile QR Routes (Full Screen) */}
+      <Route path="/waitlist/join/:branchId" element={<WaitlistJoin />} />
+      <Route path="/waitlist/status/:id" element={<WaitlistStatus />} />
+      <Route path="/session/:token" element={<TableSessionMenu />} />
+      <Route path="/attendance/clock-in/:branchId" element={<StaffClockIn />} />
     </Routes>
   );
 }

@@ -183,6 +183,16 @@ export default function LocationDetailsPage() {
                 >
                   Book Experience
                 </Button>
+                <Button
+                  component={Link}
+                  to={`/waitlist/join/${loc.id}`}
+                  variant="outlined"
+                  fullWidth
+                  size="large"
+                  sx={{ mt: 2, py: 1.5, fontSize: "1rem", borderColor: "rgba(255,255,255,0.3)", color: "white", "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.05)" } }}
+                >
+                  Join Walk-in Waitlist
+                </Button>
                 <Typography variant="caption" sx={{ display: "block", textAlign: "center", mt: 2, opacity: 0.6 }}>
                   For parties of 8 or more, please contact us directly.
                 </Typography>

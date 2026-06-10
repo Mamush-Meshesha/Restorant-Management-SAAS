@@ -144,3 +144,23 @@
     animation: shake 0.6s ease-in-out;
   }
 }
+
+/* Capacitor Barcode Scanner Native Fixes */
+html.scanner-active,
+body.scanner-active {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+body.scanner-active #root {
+  /* Hide the entire React DOM when scanning, since the Scanner UI is portaled directly into the body */
+  opacity: 0 !important;
+  visibility: hidden !important;
+  background: transparent !important;
+}
+
+/* We must preserve the scanner UI overlay's background */
+body.scanner-active .scanner-ui-overlay,
+body.scanner-active .scanner-ui-overlay .MuiBox-root {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}

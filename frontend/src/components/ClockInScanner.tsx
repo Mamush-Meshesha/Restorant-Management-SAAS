@@ -4,6 +4,7 @@ import { IconCamera, IconX } from '@tabler/icons-react';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 import { Geolocation } from '@capacitor/geolocation';
 import api from '@/api/index';
+import { createPortal } from 'react-dom';
 
 export default function ClockInScanner() {
   const [open, setOpen] = useState(false);
@@ -35,7 +36,9 @@ export default function ClockInScanner() {
       setSuccess('');
       BarcodeScanner.hideBackground();
       document.body.style.backgroundColor = 'transparent';
+      document.documentElement.style.backgroundColor = 'transparent';
       document.body.classList.add('scanner-active');
+      document.documentElement.classList.add('scanner-active');
 
       const result = await BarcodeScanner.startScan();
       
@@ -54,7 +57,9 @@ export default function ClockInScanner() {
   const stopScan = () => {
     BarcodeScanner.showBackground();
     document.body.style.backgroundColor = '';
+    document.documentElement.style.backgroundColor = '';
     document.body.classList.remove('scanner-active');
+    document.documentElement.classList.remove('scanner-active');
     BarcodeScanner.stopScan();
     setScanning(false);
   };
@@ -70,7 +75,24 @@ export default function ClockInScanner() {
         branchId = parsed.branch_id;
         token = parsed.token;
       } catch (e) {
-        throw new Error('Invalid QR code format. Please scan a valid Attendance QR.');
+        // Fallback: If they scanned the old URL format 
+        // e.g. http://localhost:3001/attendance/clock-in/branch-1?token=xyz
+        try {
+          const url = new URL(qrData);
+          const pathParts = url.pathname.split('/');
+          // pathParts should be [ "", "attendance", "clock-in", "branch-1" ]
+          const clockInIndex = pathParts.indexOf('clock-in');
+          if (clockInIndex !== -1 && clockInIndex + 1 < pathParts.length) {
+            branchId = pathParts[clockInIndex + 1];
+          }
+          token = url.searchParams.get('token') || '';
+        } catch (urlError) {
+          throw new Error('Invalid QR code format. Please scan a valid Attendance QR.');
+        }
+      }
+
+      if (!branchId || !token) {
+         throw new Error('QR Code is missing required data. Please scan a valid Attendance QR.');
       }
 
       let lat = undefined;
@@ -86,7 +108,7 @@ export default function ClockInScanner() {
         console.warn('Geolocation failed', e);
       }
 
-      const res = await api.post('/attendance/clock-in-qr', { branch_id: branchId, token, lat, lng });
+      const res = await api.post('/attendance/clock-in/qr', { branch_id: branchId, token, lat, lng });
       setSuccess(res.data?.message || 'Successfully clocked in!');
       
       setTimeout(() => {
@@ -109,8 +131,8 @@ export default function ClockInScanner() {
         <IconCamera size="21" stroke="1.5" />
       </IconButton>
 
-      {scanning && (
-        <Box sx={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 99999, display: 'flex', flexDirection: 'column' }}>
+      {scanning && createPortal(
+        <Box className="scanner-ui-overlay" sx={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 99999, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <IconButton onClick={() => { stopScan(); setOpen(false); }} sx={{ color: 'white' }}>
               <IconX />
@@ -122,7 +144,8 @@ export default function ClockInScanner() {
           <Box sx={{ p: 3, bgcolor: 'rgba(0,0,0,0.6)', textAlign: 'center' }}>
             <Typography color="white">Align QR code within the frame</Typography>
           </Box>
-        </Box>
+        </Box>,
+        document.body
       )}
 
       <Dialog open={open && !scanning} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>

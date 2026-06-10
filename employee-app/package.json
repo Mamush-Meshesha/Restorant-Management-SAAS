@@ -9,8 +9,10 @@
     "build:android": "npm run build:web && npx cap sync android"
   },
   "dependencies": {
+    "@capacitor-community/barcode-scanner": "^4.0.1",
     "@capacitor/android": "^5.7.8",
-    "@capacitor/core": "^5.7.8"
+    "@capacitor/core": "^5.7.8",
+    "@capacitor/geolocation": "^5.0.8"
   },
   "devDependencies": {
     "@capacitor/cli": "^5.7.8"

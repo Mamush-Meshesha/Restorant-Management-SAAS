@@ -50,23 +50,25 @@ export const clock_in_qr = async (req: AuthenticatedRequest, res: Response, next
 
     let isLocationValid = false;
 
-    // 1. IP Network Whitelisting (The most secure check)
-    // If the employee is connected to the restaurant's WiFi, we know they are physically there.
+    // 1. IP Network Whitelisting
     if (branch.wifi_ip && clientIp === branch.wifi_ip) {
       isLocationValid = true;
     }
 
-    // 2. GPS Fallback (Prone to spoofing, but good if WiFi IP isn't set up)
+    // 2. GPS Fallback
     if (!isLocationValid && branch.latitude && branch.longitude && lat && lng) {
       const distance = getDistanceFromLatLonInMeters(
         branch.latitude, branch.longitude,
         parseFloat(lat), parseFloat(lng)
       );
-
-      // If distance <= 100 meters, they pass the GPS check
       if (distance <= 100) {
         isLocationValid = true;
       }
+    }
+
+    // 3. Optional Geofencing: If the branch hasn't configured any geofencing (no IP, no GPS coordinates), we allow the clock in.
+    if (!branch.wifi_ip && !branch.latitude && !branch.longitude) {
+      isLocationValid = true;
     }
 
     if (!isLocationValid) {

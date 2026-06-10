@@ -5,8 +5,25 @@ import { QRCodeSVG } from "qrcode.react";
 
 export const AttendanceQRGenerator = () => {
   const branchId = useSelector((state: RootState) => state.auth.currentUser?.branch_id);
+  const [activeBranchId, setActiveBranchId] = useState(branchId || "");
   const [token, setToken] = useState("");
   const [timeLeft, setTimeLeft] = useState(30);
+
+  useEffect(() => {
+    // If Admin, fetch the first branch dynamically
+    if (!activeBranchId) {
+      fetch(import.meta.env.VITE_API_URL + '/branch', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.data && data.data.length > 0) {
+          setActiveBranchId(data.data[0].id);
+        }
+      })
+      .catch(console.error);
+    }
+  }, [activeBranchId]);
 
   // Simulate TOTP generation for demo purposes
   // In a real app, this should be an HMAC of the secret key and the current Unix time bucket
@@ -31,8 +48,10 @@ export const AttendanceQRGenerator = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const customerUrl = import.meta.env.VITE_CUSTOMER_URL || "http://localhost:3001";
-  const qrUrl = `${customerUrl}/attendance/clock-in/${branchId}?token=${token}`;
+  const qrPayload = JSON.stringify({
+    branch_id: activeBranchId,
+    token: token
+  });
 
   return (
     <div className="p-6 h-full flex flex-col items-center justify-center bg-gray-50">
@@ -42,7 +61,7 @@ export const AttendanceQRGenerator = () => {
         
         <div className="bg-blue-50 p-4 rounded-2xl mb-8 inline-block">
           <QRCodeSVG 
-            value={qrUrl} 
+            value={qrPayload} 
             size={256} 
             bgColor={"#eff6ff"} 
             fgColor={"#1e3a8a"} 

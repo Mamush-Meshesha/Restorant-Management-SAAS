@@ -218,19 +218,22 @@ jobs:
         run: npx prisma migrate deploy
 
       - name: Start backend server in background
-        run: npx ts-node src/app.ts &
+        run: npx ts-node src/app.ts > server.log 2>&1 &
         # Give the server a few seconds to boot
       
       - name: Wait for server to be ready
         run: |
-          for i in $(seq 1 15); do
-            curl -sf http://localhost:3000/api/v1/auth/login \
-              -H 'Content-Type: application/json' \
-              -d '{"email":"x","password":"x"}' \
-              -o /dev/null && echo "Server ready" && break
-            echo "Waiting... ($i)"
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api-docs/ -o /dev/null; then
+              echo "Server is ready!"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
             sleep 2
           done
+          echo "Server failed to start in time. Logs:"
+          cat server.log
+          exit 1
 
       - name: Smoke — POST /auth/login returns 400 (missing body)
         run: |

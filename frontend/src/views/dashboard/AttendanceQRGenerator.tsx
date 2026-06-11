@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
 import { QRCodeSVG } from "qrcode.react";
+import api from "@/api";
 
 export const AttendanceQRGenerator = () => {
   const branchId = useSelector((state: RootState) => state.auth.currentUser?.branch_id);
@@ -12,13 +13,10 @@ export const AttendanceQRGenerator = () => {
   useEffect(() => {
     // If Admin, fetch the first branch dynamically
     if (!activeBranchId) {
-      fetch(import.meta.env.VITE_API_URL + '/branch', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.data && data.data.length > 0) {
-          setActiveBranchId(data.data[0].id);
+      api.get('/branch')
+      .then(res => {
+        if (res.data.data && res.data.data.length > 0) {
+          setActiveBranchId(res.data.data[0].id);
         }
       })
       .catch(console.error);

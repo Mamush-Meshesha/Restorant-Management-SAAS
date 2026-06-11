@@ -26,8 +26,30 @@ export const create_role = async (req: AuthenticatedRequest, res: Response, next
 export const get_roles = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const orgId = req.user?.organizationId || req.user?.instituteId;
+    const roleName = req.user?.role_name;
+    const isSuperAdmin = roleName === 'SUPERADMIN';
+    
+    const whereClause: any = {};
+    if (!isSuperAdmin) {
+      whereClause.organization_id = orgId;
+    }
+
+    // Role-based exclusions
+    const exclusions = [];
+    if (roleName === 'COMPANY_ADMIN') {
+      exclusions.push('SUPERADMIN', 'COMPANY_ADMIN');
+    } else if (roleName === 'BRANCH_MANAGER') {
+      exclusions.push('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER');
+    } else if (!isSuperAdmin) {
+      exclusions.push('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER');
+    }
+
+    if (exclusions.length > 0) {
+      whereClause.name = { notIn: exclusions };
+    }
+
     const roles = await prisma.role.findMany({
-      where: { organization_id: orgId },
+      where: whereClause,
       include: { permissions: true }
     });
 

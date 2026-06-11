@@ -60,13 +60,19 @@ export const AttendanceQRGenerator = () => {
         <p className="text-gray-500 mb-8">Have staff scan this QR code to securely clock in.</p>
         
         <div className="bg-blue-50 p-4 rounded-2xl mb-8 inline-block">
-          <QRCodeSVG 
-            value={qrPayload} 
-            size={256} 
-            bgColor={"#eff6ff"} 
-            fgColor={"#1e3a8a"} 
-            level={"Q"} 
-          />
+          {activeBranchId ? (
+            <QRCodeSVG 
+              value={qrPayload} 
+              size={256} 
+              bgColor={"#eff6ff"} 
+              fgColor={"#1e3a8a"} 
+              level={"Q"} 
+            />
+          ) : (
+            <div className="flex items-center justify-center h-64 w-64 text-blue-800 font-medium">
+              Loading branch data...
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-center space-x-2 text-sm font-medium text-gray-600">

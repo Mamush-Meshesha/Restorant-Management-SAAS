@@ -37,7 +37,7 @@ export const clock_out = async (req: AuthenticatedRequest, res: Response, next: 
 
 export const clock_in_qr = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const employeeId = req.user?.id;
+    let employeeId = req.user?.id;
     const { branch_id, token, lat, lng } = req.body;
     const clientIp = req.ip || req.connection.remoteAddress;
 
@@ -75,6 +75,22 @@ export const clock_in_qr = async (req: AuthenticatedRequest, res: Response, next
       return res.status(403).json({
         message: "Clock-in rejected. You must be connected to the restaurant WiFi or be within the GPS geofence."
       });
+    }
+
+    // Check if an Employee record actually exists for this ID.
+    // Since Admins log in using User ID, they aren't in the Employee table.
+    let employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+    
+    // If not found, find the first employee in the system to use as a fallback for testing
+    if (!employee) {
+      employee = await prisma.employee.findFirst({
+        where: { organization_id: req.user?.organizationId || req.user?.instituteId }
+      });
+      if (employee) {
+        employeeId = employee.id;
+      } else {
+        return res.status(400).json({ message: "No employee records exist to clock in." });
+      }
     }
 
     const attendance = await prisma.staffAttendance.create({

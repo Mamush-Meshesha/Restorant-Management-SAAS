@@ -63,8 +63,15 @@ export const create_customer = async (req: AuthenticatedRequest, res: Response, 
 export const get_customers = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const orgId = req.user?.organizationId || req.user?.instituteId;
+    const isSuperAdmin = req.user?.role_name === 'SUPERADMIN';
+    
+    const whereClause: any = {};
+    if (!isSuperAdmin) {
+      whereClause.organization_id = orgId;
+    }
+
     const customers = await prisma.customer.findMany({
-      where: { organization_id: orgId },
+      where: whereClause,
       include: { tier: true }
     });
 

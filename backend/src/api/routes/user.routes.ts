@@ -5,5 +5,6 @@ import { extractInstituteData, requireRole } from '../../middleware/institute.mi
 const router = Router();
 router.post('/', extractInstituteData, requireRole('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'), controller.create_user);
 router.get('/', extractInstituteData, requireRole('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'), controller.get_users);
+router.put('/:id', extractInstituteData, requireRole('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'), controller.update_user);
 
 export default router;

@@ -28,8 +28,15 @@ export const create_employee = async (req: AuthenticatedRequest, res: Response, 
 export const get_employees = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const orgId = req.user?.organizationId || req.user?.instituteId;
+    const isSuperAdmin = req.user?.role_name === 'SUPERADMIN';
+    
+    const whereClause: any = {};
+    if (!isSuperAdmin) {
+      whereClause.organization_id = orgId;
+    }
+
     const employees = await prisma.employee.findMany({
-      where: { organization_id: orgId },
+      where: whereClause,
       include: {
         department: true,
         position: true,

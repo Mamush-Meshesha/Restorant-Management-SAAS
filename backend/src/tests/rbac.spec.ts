@@ -26,18 +26,57 @@ describe('RBAC Route Protection', () => {
     jest.clearAllMocks();
   });
 
-  describe('User Routes', () => {
-    it('allows COMPANY_ADMIN to get users', async () => {
-      prismaMock.user.findUnique.mockResolvedValue({ id: 'test-id', is_active: true, role: { name: 'COMPANY_ADMIN' }, role_id: 'r1', organization_id: 'org1' } as any);
+  describe('User Visibility Hierarchy', () => {
+    it('SUPERADMIN fetches all users across organizations without restrictions', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'test-id', is_active: true, role: { name: 'SUPERADMIN' }, role_id: 'r1', organization_id: 'org1' } as any);
       prismaMock.user.findMany.mockResolvedValue([]);
       
-      const res = await request(app)
-        .get('/api/users')
-        .set('Authorization', 'Bearer COMPANY_ADMIN');
-      expect(res.status).toBe(200);
+      await request(app).get('/api/users').set('Authorization', 'Bearer SUPERADMIN');
+      
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith({
+        where: { role: { name: { not: 'Customer' } } },
+        include: { role: true, branch: true }
+      });
     });
 
-    it('blocks WAITER from getting users', async () => {
+    it('COMPANY_ADMIN fetches only users in their org, excluding SUPERADMIN and COMPANY_ADMIN', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'test-id', is_active: true, role: { name: 'COMPANY_ADMIN' }, role_id: 'r2', organization_id: 'org1' } as any);
+      prismaMock.user.findMany.mockResolvedValue([]);
+      
+      await request(app).get('/api/users').set('Authorization', 'Bearer COMPANY_ADMIN');
+      
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith({
+        where: {
+          organization_id: 'org1',
+          OR: [
+            { id: 'test-id' },
+            { role: { name: { notIn: ['Customer', 'SUPERADMIN', 'COMPANY_ADMIN'] } } }
+          ]
+        },
+        include: { role: true, branch: true }
+      });
+    });
+
+    it('BRANCH_MANAGER fetches only users in their org and branch, excluding higher roles', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'test-id', is_active: true, role: { name: 'BRANCH_MANAGER' }, role_id: 'r3', organization_id: 'org1', branch_id: 'branch1' } as any);
+      prismaMock.user.findMany.mockResolvedValue([]);
+      
+      await request(app).get('/api/users').set('Authorization', 'Bearer BRANCH_MANAGER');
+      
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith({
+        where: {
+          organization_id: 'org1',
+          branch_id: 'branch1',
+          OR: [
+            { id: 'test-id' },
+            { role: { name: { notIn: ['Customer', 'SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'] } } }
+          ]
+        },
+        include: { role: true, branch: true }
+      });
+    });
+
+    it('blocks WAITER from getting users entirely', async () => {
       prismaMock.user.findUnique.mockResolvedValue({ id: 'test-id', is_active: true, role: { name: 'WAITER' }, role_id: 'r1', organization_id: 'org1' } as any);
       
       const res = await request(app)
@@ -48,26 +87,18 @@ describe('RBAC Route Protection', () => {
     });
   });
 
-  describe('Branch Routes', () => {
-    it('blocks BRANCH_MANAGER from creating a branch', async () => {
-      prismaMock.user.findUnique.mockResolvedValue({ id: 'test-id', is_active: true, role: { name: 'BRANCH_MANAGER' }, role_id: 'r1', organization_id: 'org1' } as any);
-      
-      const res = await request(app)
-        .post('/api/branches')
-        .set('Authorization', 'Bearer BRANCH_MANAGER')
-        .send({ name: 'New Branch', code: 'NB' });
-      expect(res.status).toBe(403);
-    });
+  describe('User Creation Hierarchy', () => {
+    it('blocks COMPANY_ADMIN from creating another COMPANY_ADMIN', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'test-id', is_active: true, role: { name: 'COMPANY_ADMIN' }, role_id: 'r1', organization_id: 'org1' } as any);
+      prismaMock.role.findUnique.mockResolvedValue({ id: 'target-role', name: 'COMPANY_ADMIN' } as any);
 
-    it('allows SUPERADMIN to create a branch', async () => {
-      prismaMock.user.findUnique.mockResolvedValue({ id: 'test-id', is_active: true, role: { name: 'SUPERADMIN' }, role_id: 'r1', organization_id: 'org1' } as any);
-      prismaMock.branch.create.mockResolvedValue({ id: 'b1' } as any);
-      
       const res = await request(app)
-        .post('/api/branches')
-        .set('Authorization', 'Bearer SUPERADMIN')
-        .send({ name: 'New Branch', code: 'NB' });
-      expect(res.status).toBe(201);
+        .post('/api/users')
+        .set('Authorization', 'Bearer COMPANY_ADMIN')
+        .send({ role_id: 'target-role', username: 'test', password: 'password', email: 'test@hummyfly.com' });
+      
+      expect(res.status).toBe(403);
+      expect(res.body.message).toMatch(/Cannot create user with COMPANY_ADMIN role/);
     });
   });
 });

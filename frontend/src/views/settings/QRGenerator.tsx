@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Box, 
   Button, 
@@ -18,6 +18,8 @@ import { toast } from 'react-toastify';
 import { QRCodeSVG } from 'qrcode.react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/redux/store';
+import { getTables } from '@/api/_tables';
+import type { Table } from '@/types/__restaurant';
 
 export default function QRGenerator() {
   const branchId = useSelector((state: RootState) => state.auth.currentUser?.branch_id) || "branch-1";
@@ -26,12 +28,11 @@ export default function QRGenerator() {
   const [qrCodeData, setQrCodeData] = useState('');
   const [selectedTable, setSelectedTable] = useState('');
 
-  // Mock tables for now. In real app, fetch from API.
-  const tables = [
-    { id: 't1', name: 'Table 1 - Main Floor' },
-    { id: 't2', name: 'Table 2 - Main Floor' },
-    { id: 't3', name: 'Table 3 - Patio' },
-  ];
+  const [tables, setTables] = useState<Table[]>([]);
+
+  useEffect(() => {
+    getTables({ branchId }).then(res => setTables(res.data.data)).catch(console.error);
+  }, [branchId]);
 
   const generateQR = async () => {
     setLoading(true);
@@ -42,7 +43,7 @@ export default function QRGenerator() {
       if (qrType === 'waitlist') {
         targetUrl = `${baseUrl}/waitlist/join/${branchId}`;
       } else if (qrType === 'session') {
-        // Mock session token for demo. In real app, this is fetched from backend.
+        // Generate an ephemeral session token for this table
         const mockSessionToken = `tbl-${selectedTable || 'general'}-${Math.random().toString(36).substring(7)}`;
         targetUrl = `${baseUrl}/session/${mockSessionToken}`;
       } else {
@@ -88,7 +89,7 @@ export default function QRGenerator() {
               ${svgData}
               <h1>Scan for Access</h1>
               <p>Point your camera at the QR code.</p>
-              ${selectedTable ? `<p><strong>${tables.find(t => t.id === selectedTable)?.name}</strong></p>` : ''}
+              ${selectedTable ? `<p><strong>${tables.find(t => t.id === selectedTable)?.name || tables.find(t => t.id === selectedTable)?.table_number}</strong></p>` : ''}
             </div>
             <script>
               // Wait a brief moment to ensure SVG is fully rendered before triggering print
@@ -139,7 +140,7 @@ export default function QRGenerator() {
                 >
                   <MenuItem value=""><em>General Branch Menu</em></MenuItem>
                   {tables.map(t => (
-                    <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+                    <MenuItem key={t.id} value={t.id}>{t.name || t.table_number}</MenuItem>
                   ))}
                 </Select>
               </FormControl>

@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import { toast } from "react-toastify";
-import { joinWaitlist } from "@/api/waitlist";
+import { joinWaitlist } from "../../api/waitlist";
+import { Box, Typography, Container, Button, Stack, TextField, Card, CardContent, IconButton, CircularProgress } from "@mui/material";
 import { motion } from "framer-motion";
+import { IconArrowLeft, IconMinus, IconPlus, IconClockHour4 } from "@tabler/icons-react";
 
 export const WaitlistJoin = () => {
   const { branchId } = useParams();
@@ -35,85 +37,117 @@ export const WaitlistJoin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative">
-      <Link 
-        to="/" 
-        className="absolute top-6 left-6 text-slate-400 hover:text-white flex items-center transition-colors font-semibold"
-      >
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-        Return to Home
-      </Link>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl"
-      >
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Join the Waitlist</h1>
-          <p className="text-slate-400 text-sm">We'll text you when your table is ready.</p>
-        </div>
+    <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: { xs: "column", md: "row" }, bgcolor: "background.default" }}>
+      
+      {/* Left side Image */}
+      <Box sx={{ 
+        width: { xs: "100%", md: "50%" }, 
+        height: { xs: "30vh", md: "100vh" },
+        position: "relative"
+      }}>
+        <img 
+          src="https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1974&auto=format&fit=crop"
+          alt="Waitlist"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+        <Button 
+          component={RouterLink} 
+          to="/"
+          startIcon={<IconArrowLeft />}
+          sx={{ position: "absolute", top: 24, left: 24, bgcolor: "background.paper", "&:hover": { bgcolor: "background.default" } }}
+          color="primary"
+          variant="contained"
+        >
+          Return Home
+        </Button>
+      </Box>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Your Name</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              placeholder="John Doe"
-            />
-          </div>
+      {/* Right side Form */}
+      <Box sx={{ 
+        width: { xs: "100%", md: "50%" }, 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center",
+        p: { xs: 4, md: 8 }
+      }}>
+        <Container maxWidth="sm">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <Box textAlign="center" mb={6}>
+              <IconClockHour4 size={48} stroke={1.5} style={{ marginBottom: 16 }} />
+              <Typography variant="h2" mb={1} color="primary.main">
+                Join the Waitlist
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                We'll text you when your table is ready. Skip the line, savor the time.
+              </Typography>
+            </Box>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
-            <input
-              type="tel"
-              required
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              placeholder="(555) 000-0000"
-            />
-          </div>
+            <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", p: { xs: 2, sm: 4 } }}>
+              <CardContent component="form" onSubmit={handleSubmit} sx={{ p: 0, "&:last-child": { pb: 0 } }}>
+                <Stack spacing={4}>
+                  
+                  <Box>
+                    <Typography variant="overline" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                      Your Name
+                    </Typography>
+                    <TextField 
+                      fullWidth
+                      variant="outlined"
+                      required
+                      placeholder="Jane Doe"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                  </Box>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Party Size</label>
-            <div className="flex items-center justify-between bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, guests: Math.max(1, formData.guests - 1) })}
-                className="w-10 h-10 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors flex items-center justify-center text-xl font-bold"
-              >
-                -
-              </button>
-              <span className="text-xl font-bold text-white">{formData.guests}</span>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, guests: formData.guests + 1 })}
-                className="w-10 h-10 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors flex items-center justify-center text-xl font-bold"
-              >
-                +
-              </button>
-            </div>
-          </div>
+                  <Box>
+                    <Typography variant="overline" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                      Phone Number
+                    </Typography>
+                    <TextField 
+                      fullWidth
+                      variant="outlined"
+                      required
+                      type="tel"
+                      placeholder="(555) 000-0000"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    />
+                  </Box>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {loading ? "Joining..." : "Join Waitlist"}
-          </button>
-        </form>
-      </motion.div>
-    </div>
+                  <Box>
+                    <Typography variant="overline" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                      Party Size
+                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1 }}>
+                      <IconButton onClick={() => setFormData({ ...formData, guests: Math.max(1, formData.guests - 1) })}>
+                        <IconMinus size={20} />
+                      </IconButton>
+                      <Typography variant="h5" fontWeight={600}>{formData.guests}</Typography>
+                      <IconButton onClick={() => setFormData({ ...formData, guests: formData.guests + 1 })}>
+                        <IconPlus size={20} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+
+                  <Button 
+                    type="submit" 
+                    variant="contained" 
+                    color="primary" 
+                    size="large" 
+                    disabled={loading}
+                    sx={{ mt: 2, py: 2 }}
+                  >
+                    {loading ? <CircularProgress size={24} color="inherit" /> : "Join Waitlist"}
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Container>
+      </Box>
+
+    </Box>
   );
 };
 

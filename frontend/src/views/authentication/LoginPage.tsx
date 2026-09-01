@@ -1,4 +1,4 @@
-import { loginUser } from "@/api/_auth";
+import { loginUser, verify2FA } from "@/api/_auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -86,6 +86,9 @@ export function LoginForm({
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [tempUserId, setTempUserId] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState("");
 
   const { control, handleSubmit, reset } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -96,9 +99,14 @@ export function LoginForm({
     try {
       setLoading(true);
       const { data } = await loginUser({ email, password });
-      if (data.token) {
-        dispatch(loginFinished(data));
-        const roleName = data.user?.role?.name || (data.user?.role as any)?.role_name || "";
+      
+      if ((data as any).requires_2fa) {
+        setRequires2FA(true);
+        setTempUserId((data as any).userId);
+        toast.info("A 2FA verification code has been sent to your email.");
+      } else if ((data as any).token) {
+        dispatch(loginFinished(data as any));
+        const roleName = (data as any).user?.role?.name || (data as any).user?.role?.role_name || "";
         const redirectPath = ROLE_DEFAULT_PATHS[roleName] ?? "/dashboard";
         navigate(redirectPath, { replace: true });
       } else {
@@ -109,6 +117,31 @@ export function LoginForm({
       const msg =
         err?.response?.data?.message ??
         (err instanceof Error ? err.message : "An error occurred during login!");
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onVerify2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!twoFactorCode) {
+      toast.error("Please enter the verification code.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const { data } = await verify2FA({ userId: tempUserId, code: twoFactorCode });
+      if (data.token) {
+        dispatch(loginFinished(data));
+        const roleName = data.user?.role?.name || (data.user?.role as any)?.role_name || "";
+        const redirectPath = ROLE_DEFAULT_PATHS[roleName] ?? "/dashboard";
+        navigate(redirectPath, { replace: true });
+      } else {
+        toast.error("Verification failed. Please try again.");
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? "Invalid or expired code";
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -127,86 +160,134 @@ export function LoginForm({
           </p>
         </CardHeader>
         <CardContent className="p-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <FormInput
-                label="Email"
-                name="email"
-                control={control}
-                placeholder="admin@restaurant.com"
-                type="email"
-              />
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                    Password
-                  </Label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-blue-600 hover:text-purple-600 transition-colors duration-200 hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+          {!requires2FA ? (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-4">
                 <FormInput
-                  label=""
-                  name="password"
+                  label="Email"
+                  name="email"
                   control={control}
-                  placeholder="Enter your password"
-                  type={showPassword ? "text" : "password"}
-                  endIcon={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hover:bg-transparent"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  }
+                  placeholder="admin@restaurant.com"
+                  type="email"
                 />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                      Password
+                    </Label>
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm text-blue-600 hover:text-purple-600 transition-colors duration-200 hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <FormInput
+                    label=""
+                    name="password"
+                    control={control}
+                    placeholder="Enter your password"
+                    type={showPassword ? "text" : "password"}
+                    endIcon={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hover:bg-transparent"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    }
+                  />
+                </div>
               </div>
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full h-12 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] disabled:hover:scale-100"
-              disabled={loading}
-              style={{
-                background: loading
-                  ? "linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)"
-                  : "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
-                boxShadow: loading
-                  ? "0 4px 12px rgba(107, 114, 128, 0.3)"
-                  : "0 4px 12px rgba(59, 130, 246, 0.3)",
-                border: "none",
-                borderRadius: "8px",
-              }}
-            >
-              {loading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Signing in...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign In</span>
-                </div>
-              )}
-            </Button>
+              <Button
+                type="submit"
+                className="w-full h-12 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] disabled:hover:scale-100"
+                disabled={loading}
+                style={{
+                  background: loading
+                    ? "linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)"
+                    : "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+                  boxShadow: loading
+                    ? "0 4px 12px rgba(107, 114, 128, 0.3)"
+                    : "0 4px 12px rgba(59, 130, 246, 0.3)",
+                  border: "none",
+                  borderRadius: "8px",
+                }}
+              >
+                {loading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Signing in...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <LogIn className="w-4 h-4" />
+                    <span>Sign In</span>
+                  </div>
+                )}
+              </Button>
 
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Don&apos;t have an account?{" "}
-                <a href="#" className="text-blue-600 hover:text-purple-600 font-medium transition-colors duration-200 hover:underline">
-                  Contact Administrator
-                </a>
-              </p>
-            </div>
-          </form>
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Don&apos;t have an account?{" "}
+                  <a href="#" className="text-blue-600 hover:text-purple-600 font-medium transition-colors duration-200 hover:underline">
+                    Contact Administrator
+                  </a>
+                </p>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={onVerify2FA} className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="twoFactorCode" className="text-sm font-medium text-gray-700">
+                    6-Digit Verification Code
+                  </Label>
+                  <input
+                    id="twoFactorCode"
+                    type="text"
+                    value={twoFactorCode}
+                    onChange={(e) => setTwoFactorCode(e.target.value)}
+                    placeholder="Enter code from email"
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-12 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] disabled:hover:scale-100"
+                disabled={loading}
+                style={{
+                  background: loading
+                    ? "linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)"
+                    : "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+                  boxShadow: loading
+                    ? "0 4px 12px rgba(107, 114, 128, 0.3)"
+                    : "0 4px 12px rgba(59, 130, 246, 0.3)",
+                  border: "none",
+                  borderRadius: "8px",
+                }}
+              >
+                {loading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Verifying...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Shield className="w-4 h-4" />
+                    <span>Verify Code</span>
+                  </div>
+                )}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
 

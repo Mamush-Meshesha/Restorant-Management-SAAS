@@ -7,6 +7,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
+# Install build dependencies for native modules (like bcrypt)
+RUN apk add --no-cache python3 make g++
+
 # Install dependencies
 RUN npm ci
 
@@ -27,6 +30,9 @@ WORKDIR /app
 # Copy package files and prisma
 COPY package*.json ./
 COPY prisma ./prisma/
+
+# Install build dependencies for native modules (like bcrypt)
+RUN apk add --no-cache python3 make g++
 
 # Install only production dependencies
 RUN npm ci --omit=dev

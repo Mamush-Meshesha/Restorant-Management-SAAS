@@ -4,26 +4,26 @@ const theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#2b2118", // Deep Espresso
-      light: "#4a3c31",
-      dark: "#140f0b",
-      contrastText: "#ffffff",
+      main: "#000000",
+      light: "#333333",
+      dark: "#000000",
+      contrastText: "#FFFFFF",
     },
     secondary: {
-      main: "#d4af37", // Champagne Gold
-      light: "#eadd99",
-      dark: "#997e24",
-      contrastText: "#2b2118",
+      main: "#D32F2F", // A refined, appetizing red accent
+      light: "#E57373",
+      dark: "#C62828",
+      contrastText: "#FFFFFF",
     },
     background: {
-      default: "#faf9f6", // Off-white/pearl
-      paper: "#ffffff",
+      default: "#FFFFFF", // Pure white for crisp contrast
+      paper: "#F8F8F8", // Very subtle gray for cards
     },
     text: {
-      primary: "#2b2118",
-      secondary: "#6e6259",
+      primary: "#000000",
+      secondary: "#666666",
     },
-    divider: alpha("#2b2118", 0.1),
+    divider: alpha("#000000", 0.08),
   },
   typography: {
     fontFamily: '"Inter", "Helvetica", "Arial", sans-serif',
@@ -34,69 +34,92 @@ const theme = createTheme({
     },
     h2: {
       fontFamily: '"Playfair Display", serif',
-      fontWeight: 500,
-      letterSpacing: "-0.01em",
+      fontWeight: 600,
+      letterSpacing: "-0.02em",
     },
     h3: {
       fontFamily: '"Playfair Display", serif',
       fontWeight: 500,
     },
     h4: {
-      fontFamily: '"Playfair Display", serif',
-      fontWeight: 500,
+      fontFamily: '"Inter", sans-serif',
+      fontWeight: 600,
     },
     h5: {
-      fontFamily: '"Playfair Display", serif',
-      fontWeight: 500,
+      fontFamily: '"Inter", sans-serif',
+      fontWeight: 600,
     },
     h6: {
-      fontFamily: '"Playfair Display", serif',
+      fontFamily: '"Inter", sans-serif',
       fontWeight: 600,
     },
     button: {
-      textTransform: "none",
+      textTransform: "none", // Modern apps avoid all-caps buttons
       fontWeight: 500,
-      letterSpacing: "0.02em",
+      letterSpacing: "0em",
+      fontFamily: '"Inter", sans-serif',
     },
     overline: {
       letterSpacing: "0.1em",
       fontWeight: 600,
+      textTransform: "uppercase",
+      fontFamily: '"Inter", sans-serif',
+    },
+    body1: {
+      fontWeight: 400,
+      lineHeight: 1.6,
+    },
+    body2: {
+      fontWeight: 400,
+      lineHeight: 1.5,
     },
   },
   shape: {
-    borderRadius: 8,
+    borderRadius: 8, // Rounded corners are more standard for modern web
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          backgroundColor: "#FFFFFF",
+          color: "#000000",
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 4,
-          padding: "10px 24px",
+          borderRadius: 100, // Pill-shaped buttons are very modern
+          padding: "12px 28px",
           boxShadow: "none",
-          transition: "all 0.3s ease",
           "&:hover": {
-            boxShadow: "0 4px 12px rgba(43, 33, 24, 0.15)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             transform: "translateY(-1px)",
           },
+          transition: "all 0.2s ease-in-out",
         },
         containedPrimary: {
-          backgroundColor: "#2b2118",
+          backgroundColor: "#000000",
+          color: "#FFFFFF",
           "&:hover": {
-            backgroundColor: "#140f0b",
+            backgroundColor: "#333333",
           },
         },
         containedSecondary: {
-          backgroundColor: "#d4af37",
-          color: "#2b2118",
+          backgroundColor: "#D32F2F",
+          color: "#FFFFFF",
           "&:hover": {
-            backgroundColor: "#c29d2b",
+            backgroundColor: "#B71C1C",
           },
         },
         outlinedPrimary: {
-          borderColor: alpha("#2b2118", 0.3),
+          borderColor: "#E0E0E0",
+          borderWidth: "1px",
+          color: "#000000",
           "&:hover": {
-            borderColor: "#2b2118",
-            backgroundColor: "transparent",
+            borderColor: "#000000",
+            borderWidth: "1px",
+            backgroundColor: "#F5F5F5",
           },
         },
       },
@@ -104,50 +127,56 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: "none",
-          border: `1px solid ${alpha("#2b2118", 0.08)}`,
-          borderRadius: 12,
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        elevation1: {
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
-        },
-        elevation2: {
-          boxShadow: "0 8px 30px rgba(0, 0, 0, 0.05)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          border: `1px solid #EAEAEA`,
+          borderRadius: 16,
+          backgroundColor: "#FFFFFF",
+          transition: "box-shadow 0.2s ease",
+          "&:hover": {
+            boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+          }
         },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(10px)",
-          color: "#2b2118",
+          backgroundColor: "#FFFFFF",
+          color: "#000000",
           boxShadow: "none",
-          borderBottom: `1px solid ${alpha("#2b2118", 0.05)}`,
+          borderBottom: `1px solid #EAEAEA`,
         },
       },
     },
-    MuiTextField: {
+    MuiBottomNavigation: {
       styleOverrides: {
         root: {
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": {
-              borderColor: alpha("#2b2118", 0.2),
-              transition: "border-color 0.3s ease",
-            },
-            "&:hover fieldset": {
-              borderColor: alpha("#2b2118", 0.4),
-            },
-            "&.Mui-focused fieldset": {
-              borderColor: "#d4af37",
-            },
-          },
+          backgroundColor: "#FFFFFF",
+          borderTop: `1px solid #EAEAEA`,
+          height: 70,
+          paddingBottom: "env(safe-area-inset-bottom)", 
+        }
+      }
+    },
+    MuiBottomNavigationAction: {
+      styleOverrides: {
+        root: {
+          color: "#999999",
+          "&.Mui-selected": {
+            color: "#000000",
+          }
         },
-      },
+        label: {
+          fontFamily: '"Inter", sans-serif',
+          fontWeight: 500,
+          fontSize: "0.7rem",
+          marginTop: "4px",
+          "&.Mui-selected": {
+            fontSize: "0.7rem",
+            fontWeight: 600,
+          }
+        }
+      }
     },
   },
 });

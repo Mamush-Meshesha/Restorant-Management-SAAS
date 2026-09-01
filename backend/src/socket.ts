@@ -56,6 +56,13 @@ export const initWebSockets = (server: HttpServer) => {
       }
     });
 
+    socket.on("join_branch", (data: { branchId: string }) => {
+      if (data.branchId) {
+        socket.join(`branch_${data.branchId}`);
+        console.log(`[Socket] Client ${socket.id} joined branch_${data.branchId}`);
+      }
+    });
+
     socket.on("disconnect", () => {
       console.log(`[Socket] Client disconnected: ${socket.id}`);
     });

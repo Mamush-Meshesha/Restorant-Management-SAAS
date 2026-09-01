@@ -9,6 +9,8 @@ export interface Organization {
   phone?: string;
   address?: string;
   logo?: string;
+  website?: string;
+  tax_id?: string;
   created_at: string;
 }
 
@@ -19,6 +21,11 @@ export interface Branch {
   organization_id: string;
   address?: string;
   phone?: string;
+  email?: string;
+  latitude?: number;
+  longitude?: number;
+  wifi_ip?: string;
+  qr_secret_key?: string;
   is_active: boolean;
   created_at: string;
 }
@@ -57,6 +64,7 @@ export interface MenuItem {
   is_available: boolean;
   is_vegetarian: boolean;
   is_vegan: boolean;
+  is_gluten_free: boolean;
   allergens?: string[];
   category_id: string;
   category?: MenuCategory;
@@ -66,9 +74,9 @@ export interface MenuItem {
 
 export interface MenuVariant {
   id: string;
-  menu_item_id: string;
+  menu_item_id?: string;
   name: string;
-  price_modifier: number;
+  price_adjustment: number;
 }
 
 export interface MenuAddon {
@@ -98,6 +106,12 @@ export interface Table {
   branch_id: string;
   dining_area_id: string;
   table_number: string;
+  name?: string;
+  x_pos?: number;
+  y_pos?: number;
+  rotation?: number;
+  scale_x?: number;
+  scale_y?: number;
   capacity: number;
   status: TableStatus;
   is_active: boolean;
@@ -122,6 +136,7 @@ export interface OrderItem {
   notes?: string;
   status: string;
   menuItem?: MenuItem;
+  order?: Order;
 }
 
 export interface Order {
@@ -137,6 +152,8 @@ export interface Order {
   discount_amount: number;
   total_amount: number;
   notes?: string;
+  payment_method?: string;
+  payment_status?: string;
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
@@ -169,13 +186,21 @@ export interface Bill {
 
 export type KitchenOrderStatus = 'PENDING' | 'PREPARING' | 'READY' | 'SERVED';
 
+export interface KitchenStation {
+  id: string;
+  branch_id: string;
+  name: string;
+  is_active: boolean;
+}
+
 export interface KitchenOrder {
   id: string;
-  order_id: string;
+  order_item_id: string;
   station_id?: string;
   status: KitchenOrderStatus;
   started_at?: string;
   completed_at?: string;
+  orderItem?: OrderItem;
   order?: Order;
 }
 
@@ -238,4 +263,136 @@ export interface PaginatedResponse<T> {
     hasNext: boolean;
     hasPrev: boolean;
   };
+}
+
+// =============================================
+// Recipe Types
+// =============================================
+
+export interface RecipeIngredient {
+  id?: string;
+  recipe_id?: string;
+  inventory_item_id: string;
+  quantity: number;
+  unit: string;
+  inventoryItem?: InventoryItem;
+}
+
+export interface Recipe {
+  id: string;
+  menu_item_id: string;
+  instructions?: string;
+  prep_time?: number;
+  cook_time?: number;
+  menuItem?: MenuItem;
+  ingredients?: RecipeIngredient[];
+}
+// =============================================
+// Inventory, Suppliers & Delivery Types
+// =============================================
+
+export interface Supplier {
+  id: string;
+  organization_id: string;
+  name: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  is_active: boolean;
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  purchase_order_id: string;
+  inventory_item_id: string;
+  quantity: number;
+  unit_price: number;
+  item?: InventoryItem;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  branch_id: string;
+  supplier_id: string;
+  status: string;
+  total_amount: number;
+  expected_date?: string;
+  supplier?: Supplier;
+  items?: PurchaseOrderItem[];
+}
+
+export interface DeliveryZone {
+  id: string;
+  branch_id: string;
+  name: string;
+  radius_km: number;
+  delivery_fee: number;
+  min_order_amount: number;
+  is_active: boolean;
+}
+
+export interface Driver {
+  id: string;
+  organization_id: string;
+  name: string;
+  phone: string;
+  vehicle_type?: string;
+  vehicle_plate?: string;
+  is_active: boolean;
+}
+
+export interface DeliveryOrder {
+  id: string;
+  order_id: string;
+  driver_id?: string;
+  customer_address: string;
+  delivery_fee: number;
+  status: string;
+  estimated_time?: string;
+  delivered_at?: string;
+  order?: Order;
+  driver?: Driver;
+}
+
+// =============================================
+// HR & Employees Types
+// =============================================
+
+export interface Department {
+  id: string;
+  organization_id: string;
+  name: string;
+  is_active: boolean;
+}
+
+export interface Position {
+  id: string;
+  organization_id: string;
+  name: string;
+  base_salary?: number;
+  is_active: boolean;
+}
+
+export interface EmploymentType {
+  id: string;
+  organization_id: string;
+  name: string;
+}
+
+export interface Employee {
+  id: string;
+  organization_id: string;
+  department_id: string;
+  position_id: string;
+  employment_type_id: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  email?: string;
+  hire_date: string;
+  is_active: boolean;
+  department?: Department;
+  position?: Position;
+  employmentType?: EmploymentType;
 }

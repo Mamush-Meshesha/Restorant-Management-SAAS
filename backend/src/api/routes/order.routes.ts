@@ -17,4 +17,7 @@ router.put('/:id/status', extractInstituteData, canUpdateOrderStatus, controller
 // Only managers and above can cancel orders
 router.put('/:id/cancel', extractInstituteData, canCancelOrder, controller.cancel_order);
 
+// Voiding individual items to prevent fraud
+router.put('/item/:id/void', extractInstituteData, controller.void_order_item);
+
 export default router;

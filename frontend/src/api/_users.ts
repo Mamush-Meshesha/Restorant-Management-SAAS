@@ -34,3 +34,6 @@ export const deleteUser = (
   id: string
 ): Promise<AxiosResponse<{ message: string }>> =>
   api.delete(`/user/${id}`);
+
+export const toggle2fa = (): Promise<AxiosResponse<{ message: string; is_2fa_enabled: boolean }>> =>
+  api.post("/user/2fa/toggle");

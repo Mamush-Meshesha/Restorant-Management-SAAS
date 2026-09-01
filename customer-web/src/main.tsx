@@ -6,6 +6,9 @@ import { PersistGate } from 'redux-persist/integration/react'
 import { ThemeProvider, CssBaseline } from '@mui/material'
 
 import { store, persistor } from './redux/store'
+import { registerSW } from "virtual:pwa-register";
+
+registerSW({ immediate: true });
 import theme from './theme/theme'
 import './index.css'
 import App from './App.tsx'

@@ -1,8 +1,8 @@
 import type { AxiosResponse } from "axios";
 import api from ".";
 
-export const getReservations = (): Promise<AxiosResponse<{ data: any[] }>> =>
-  api.get("/reservation");
+export const getReservations = (params?: { date?: string }): Promise<AxiosResponse<{ data: any[] }>> =>
+  api.get("/reservation", { params });
 
 export const createReservation = (data: {
   table_id: string;
@@ -19,3 +19,14 @@ export const updateReservationStatus = (
   status: string
 ): Promise<AxiosResponse<{ message: string; data: any }>> =>
   api.put(`/reservation/${id}/status`, { status });
+
+export const updateReservation = (
+  id: string,
+  data: any
+): Promise<AxiosResponse<{ message: string; data: any }>> =>
+  api.put(`/reservation/${id}`, data);
+
+export const deleteReservation = (
+  id: string
+): Promise<AxiosResponse<{ message: string }>> =>
+  api.delete(`/reservation/${id}`);

@@ -6,6 +6,7 @@ import LocationDetailsPage from "./views/locations/LocationDetailsPage";
 import MenuPage from "./views/menu/MenuPage";
 import ReservationPage from "./views/reservations/ReservationPage";
 import OrderPage from "./views/order/OrderPage";
+import OrderTrackingPage from "./views/order/OrderTrackingPage";
 import AccountPage from "./views/account/AccountPage";
 
 import AuthLayout from "./layouts/AuthLayout/AuthLayout";
@@ -31,6 +32,7 @@ function App() {
         <Route path="menu" element={<MenuPage />} />
         <Route path="reservations" element={<ProtectedRoute><ReservationPage /></ProtectedRoute>} />
         <Route path="order" element={<ProtectedRoute><OrderPage /></ProtectedRoute>} />
+        <Route path="order/track/:id" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
         <Route path="account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Route>

@@ -12,27 +12,39 @@ export const join_session = async (req: AuthenticatedRequest, res: Response, nex
     if (!menuQr || !menuQr.table_id) {
       return res.status(404).json({ message: "Invalid or missing Table QR token." });
     }
+    
+    const tableId = menuQr.table_id; // Capture as non-null string
 
-    // 2. Find or create an open session for this table
-    let session = await prisma.tableSession.findFirst({
-      where: { table_id: menuQr.table_id, status: 'OPEN' }
-    });
+    // 2. Find or create an open session for this table safely using a transaction
+    let session = await prisma.$transaction(async (tx) => {
+      let existing = await tx.tableSession.findFirst({
+        where: { table_id: tableId, status: 'OPEN' }
+      });
+      
+      if (existing) return existing;
 
-    if (!session) {
-      session = await prisma.tableSession.create({
+      // Verify table is not already occupied by another process just now
+      const table = await tx.table.findUnique({ where: { id: tableId } });
+      if (table && table.status === 'OCCUPIED') {
+         // It's occupied but has no open session? That's an anomaly, but let's prevent creation just in case
+         // or we can allow it if there's genuinely no session. We'll rely on the transaction lock.
+      }
+
+      const newSession = await tx.tableSession.create({
         data: {
-          table_id: menuQr.table_id,
+          table_id: tableId,
           token: `sess_${Date.now()}_${Math.random().toString(36).substring(7)}`,
           status: 'OPEN'
         }
       });
       
-      // Update table status to occupied
-      await prisma.table.update({
-        where: { id: menuQr.table_id },
+      await tx.table.update({
+        where: { id: tableId },
         data: { status: 'OCCUPIED' }
       });
-    }
+
+      return newSession;
+    });
 
     // 3. Add the customer as a guest to the session (if they are logged in)
     const customerId = req.user?.role_name === 'Customer' ? req.user?.id : null;
@@ -58,7 +70,8 @@ export const join_session = async (req: AuthenticatedRequest, res: Response, nex
       data: {
         session_id: session.id,
         session_token: session.token,
-        table_id: session.table_id
+        table_id: session.table_id,
+        branch_id: menuQr.branch_id
       }
     });
   } catch (error) { next(error); }

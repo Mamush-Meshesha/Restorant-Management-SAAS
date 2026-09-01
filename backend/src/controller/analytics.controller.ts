@@ -109,3 +109,35 @@ export const get_daily_revenue = async (req: AuthenticatedRequest, res: Response
     res.status(200).json({ data: reports });
   } catch (error) { next(error); }
 };
+
+export const get_expense_categories = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const orgId = req.user?.organization_id;
+    if (!orgId) return res.status(400).json({ message: "Organization ID is required" });
+
+    const categories = await prisma.expenseCategory.findMany({
+      where: { organization_id: orgId },
+      orderBy: { name: 'asc' }
+    });
+
+    res.status(200).json({ data: categories });
+  } catch (error) { next(error); }
+};
+
+export const create_expense_category = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const orgId = req.user?.organization_id;
+    if (!orgId) return res.status(400).json({ message: "Organization ID is required" });
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ message: "Category name is required" });
+
+    const category = await prisma.expenseCategory.create({
+      data: {
+        organization_id: orgId,
+        name
+      }
+    });
+
+    res.status(201).json({ message: "Expense category created", data: category });
+  } catch (error) { next(error); }
+};

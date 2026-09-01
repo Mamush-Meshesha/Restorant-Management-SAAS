@@ -7,10 +7,11 @@ import {
   useTheme,
   Tooltip,
   Collapse,
+  Box,
 } from "@mui/material";
 import React, { useState } from "react";
-import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
-import { NavLink } from "react-router";
+import { IconChevronDown, IconChevronUp, IconLock } from "@tabler/icons-react";
+import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../../redux/store";
 export interface NavHeaderItemType {
@@ -25,6 +26,7 @@ export interface NavItemType {
   title: string;
   external?: boolean;
   disabled?: boolean;
+  premiumOnly?: boolean;
   children?: NavItemType[];
 }
 
@@ -34,6 +36,7 @@ interface NavItemProps {
   level: number;
   onClick?: () => void;
   disabled?: boolean;
+  locked?: boolean;
 }
 
 const NavItem: React.FC<NavItemProps> = ({
@@ -41,6 +44,7 @@ const NavItem: React.FC<NavItemProps> = ({
   level,
   pathDirect,
   onClick,
+  locked,
 }) => {
   const Icon = item.icon;
   const theme = useTheme();
@@ -48,7 +52,11 @@ const NavItem: React.FC<NavItemProps> = ({
   const itemIcon = <Icon stroke={1.5} size="1.3rem" />;
   const [open, setOpen] = useState(false);
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    if (locked) {
+      e.preventDefault();
+      return; // Do nothing if locked
+    }
     if (item.children) {
       setOpen(!open);
     } else if (onClick) {
@@ -86,41 +94,53 @@ const NavItem: React.FC<NavItemProps> = ({
 
   const isExternal = item.external;
 
-  const listItemProps = item.children
+  const listItemProps = locked 
     ? { component: "div" }
-    : isExternal
-    ? {
-        component: "a",
-        href: item.href,
-        target: "_blank",
-        rel: "noopener noreferrer",
-      }
-    : {
-        component: NavLink,
-        to: item.href,
-      };
+    : item.children
+      ? { component: "div" }
+      : isExternal
+      ? {
+          component: "a",
+          href: item.href,
+          target: "_blank",
+          rel: "noopener noreferrer",
+        }
+      : {
+          component: NavLink,
+          to: item.href,
+        };
 
   return (
     <List component="li" disablePadding key={item.id}>
-      <Tooltip title={sidebarCompact ? item.title : ""} placement="right">
+      <Tooltip title={sidebarCompact ? item.title : (locked ? "Requires Premium Plan" : "")} placement="right">
         <ListItemStyled
-          {...listItemProps}
+          {...listItemProps as any}
           disabled={item.disabled}
-          selected={pathDirect === item.href}
+          selected={pathDirect === item.href && !locked}
           onClick={handleClick}
         >
           <ListItemIcon
             sx={{
-              minWidth: sidebarCompact ? 0 : "36px",
+              minWidth: "36px",
               p: "3px 0",
-              color: "inherit",
+              color: locked ? theme.palette.text.disabled : "inherit",
+              justifyContent: sidebarCompact ? "center" : "flex-start",
             }}
           >
             {itemIcon}
           </ListItemIcon>
-          {!sidebarCompact && <ListItemText primary={item.title} />}
-          {!sidebarCompact && item.children && (
-            open ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />
+          {!sidebarCompact && (
+            <>
+              <ListItemText>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: locked ? theme.palette.text.disabled : "inherit" }}>
+                  {item.title}
+                  {locked && <IconLock size={14} color={theme.palette.text.disabled} />}
+                </Box>
+              </ListItemText>
+              {item.children && (
+                open ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />
+              )}
+            </>
           )}
         </ListItemStyled>
       </Tooltip>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Box, Grid, Card, CardContent, Typography, Stack, useTheme,
   IconButton, TextField, InputAdornment, Chip, Divider,
-  Button, alpha, Badge, CircularProgress,
+  Button, alpha, Badge, CircularProgress, Select, MenuItem as SelectItem,
 } from "@mui/material";
 import {
   IconSearch, IconShoppingCart, IconTrash, IconPlus, IconMinus,
@@ -12,7 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import PageContainer from "../../components/container/PageContainer";
 import { getCategories, getMenuItems } from "@/api/_menu";
 import { createOrder } from "@/api/_orders";
-import type { MenuCategory, MenuItem } from "@/types/__restaurant";
+import { getTables } from "@/api/_tables";
+import type { MenuCategory, MenuItem, Table } from "@/types/__restaurant";
 import { toast } from "react-toastify";
 
 type CartItem = { item: MenuItem; qty: number; notes?: string };
@@ -30,17 +31,22 @@ export default function POS() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [tableNo, setTableNo] = useState("T-01");
+  const [tablesList, setTablesList] = useState<Table[]>([]);
+  const [tableNo, setTableNo] = useState("");
+  const [orderType, setOrderType] = useState<"DINE_IN" | "TAKEAWAY" | "DELIVERY">("DINE_IN");
 
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const [catRes, itemRes] = await Promise.all([
+        const [catRes, menuRes, tablesRes] = await Promise.all([
           getCategories(),
           getMenuItems(),
+          getTables()
         ]);
         setCategories(catRes.data.data || []);
-        setMenuItems(itemRes.data.data || []);
+        setMenuItems(menuRes.data.data || []);
+        const fetchedTables = tablesRes.data.data || [];
+        setTablesList(fetchedTables);
       } catch (error) {
         console.error("Failed to load menu:", error);
         toast.error("Failed to load menu");
@@ -80,8 +86,8 @@ export default function POS() {
     setSubmitting(true);
     try {
       await createOrder({
-        order_type: 'DINE_IN',
-        notes: `Table: ${tableNo}`,
+        order_type: orderType,
+        notes: orderType === 'DINE_IN' ? `Table: ${tableNo}` : orderType,
         items: cart.map(c => ({
           menu_item_id: c.item.id,
           quantity: c.qty,
@@ -128,16 +134,42 @@ export default function POS() {
                     },
                   }}
                 />
-                <TextField
+                <Select
                   size="small"
-                  label="Table"
-                  value={tableNo}
-                  onChange={(e) => setTableNo(e.target.value)}
+                  value={orderType}
+                  onChange={(e) => setOrderType(e.target.value)}
                   sx={{
-                    width: 100,
-                    "& .MuiOutlinedInput-root": { borderRadius: "7px", "& fieldset": { borderColor: theme.palette.divider } },
+                    width: 140,
+                    borderRadius: "7px",
+                    "& fieldset": { borderColor: theme.palette.divider },
                   }}
-                />
+                >
+                  <SelectItem value="DINE_IN">Dine-In</SelectItem>
+                  <SelectItem value="TAKEAWAY">Takeaway</SelectItem>
+                  <SelectItem value="DELIVERY">Delivery</SelectItem>
+                </Select>
+                {orderType === "DINE_IN" && (
+                  <Select
+                    size="small"
+                    value={tableNo}
+                    displayEmpty
+                    onChange={(e) => setTableNo(e.target.value)}
+                    sx={{
+                      width: 120,
+                      borderRadius: "7px",
+                      "& fieldset": { borderColor: theme.palette.divider },
+                    }}
+                  >
+                    <SelectItem value="" disabled>
+                      <em>Select Table</em>
+                    </SelectItem>
+                    {tablesList.map(t => (
+                      <SelectItem key={t.id} value={t.table_number || t.name}>
+                        {t.table_number || t.name}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                )}
               </Stack>
               <Stack direction="row" spacing={1} sx={{ overflowX: "auto", pb: 0.5, "&::-webkit-scrollbar": { display: "none" } }}>
                 <Chip

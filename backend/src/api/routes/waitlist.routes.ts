@@ -11,5 +11,7 @@ router.get('/:id/status', controller.get_waitlist_status);
 // Protected endpoints for staff
 router.get('/branch/:branchId', extractInstituteData, controller.get_branch_waitlist);
 router.put('/:id/status', extractInstituteData, controller.update_waitlist_status);
+router.post('/:id/seat', extractInstituteData, controller.seat_waitlist);
+router.post('/:id/pay-deposit', controller.pay_waitlist_deposit);
 
 export default router;

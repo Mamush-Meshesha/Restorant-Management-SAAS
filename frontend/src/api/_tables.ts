@@ -45,6 +45,11 @@ export const updateTableStatus = (
 ): Promise<AxiosResponse<{ message: string; data: Table }>> =>
   api.put(`/table/${id}/status`, { status });
 
+export const batchUpdateTables = (
+  tables: Array<{ id: string; x_pos?: number; y_pos?: number; name?: string; capacity?: number; rotation?: number; scale_x?: number; scale_y?: number }>
+): Promise<AxiosResponse<{ message: string }>> =>
+  api.put(`/table/batch-update`, { tables });
+
 export const updateTable = (
   id: string,
   data: Partial<Table>

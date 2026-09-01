@@ -8,6 +8,7 @@ import express, {
   type NextFunction,
 } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import validator from "express-validator";
 import serveStatic from "serve-static";
 import path from "path";
@@ -21,10 +22,19 @@ import { InitService } from "./services/init.service";
 import { setupSwagger } from "./docs/swagger";
 
 const app = express();
-// Allow all origins and all methods for CORS, including preflight
+app.use(cookieParser());
+
+const allowedOrigins = process.env.FRONTEND_URLS?.split(',') || ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:3001', 'http://localhost:3002'];
+
 app.use(
   cors({
-    origin: "*",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Accept",
@@ -49,7 +59,7 @@ app.use(express.urlencoded({ limit: "5mb", extended: true }));
 // Middleware
 app.use(validator());
 app.use("/_resources", serveStatic(path.join(__dirname, "..", "_resources")));
-// Set cross-origin header so frontend on a different port can load uploaded images
+// Set cross-origin header so frontend on a different port can load uploaded legacy images
 app.use("/uploads", (req, res, next) => {
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.setHeader("Access-Control-Allow-Origin", "*");

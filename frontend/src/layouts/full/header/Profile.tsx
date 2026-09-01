@@ -18,7 +18,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import {
-  IconListCheck,
   IconMail,
   IconUser,
   IconSettings,
@@ -27,7 +26,6 @@ import {
 } from "@tabler/icons-react";
 
 // logout is handled locally via Redux only
-import ProfileImg from "@/assets/images/profile/user-1.jpg";
 import { useAppDispatch, useAppSelector } from "@/hooks/auth";
 import { logoutFinished } from "../../../redux/slices/authSlice";
 
@@ -99,11 +97,6 @@ const Profile = () => {
     },
     { icon: IconMail, label: "Messages", action: () => navigate("/messages") },
     {
-      icon: IconListCheck,
-      label: "My Tasks",
-      action: () => navigate("/tasks"),
-    },
-    {
       icon: IconSettings,
       label: "Settings",
       action: () => navigate("/app-settings"),
@@ -120,15 +113,20 @@ const Profile = () => {
           aria-expanded={open ? "true" : undefined}
         >
           <Avatar
-            src={ProfileImg}
-            alt="Profile"
+            src={(currentUser as any)?.avatar || undefined}
+            alt={currentUser?.username || "Profile"}
             sx={{
               width: 40,
               height: 40,
+              bgcolor: "primary.main",
+              color: "white",
+              fontWeight: "bold",
               border: (theme) =>
                 `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
             }}
-          />
+          >
+            {!(currentUser as any)?.avatar && (currentUser?.username?.charAt(0)?.toUpperCase() || "U")}
+          </Avatar>
           <Box sx={{ display: { xs: "none", sm: "block" }, minWidth: 0 }}>
             <Typography
               variant="subtitle2"
@@ -177,10 +175,18 @@ const Profile = () => {
         <Box sx={{ p: 2, pb: 1 }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Avatar
-              src={ProfileImg}
-              alt="Profile"
-              sx={{ width: 48, height: 48 }}
-            />
+              src={(currentUser as any)?.avatar || undefined}
+              alt={currentUser?.username || "Profile"}
+              sx={{ 
+                width: 48, 
+                height: 48,
+                bgcolor: "primary.main",
+                color: "white",
+                fontWeight: "bold"
+              }}
+            >
+              {!(currentUser as any)?.avatar && (currentUser?.username?.charAt(0)?.toUpperCase() || "U")}
+            </Avatar>
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                 {currentUser?.username || "Default User"}

@@ -13,7 +13,7 @@ import { authenticate, requireRole } from '../middleware/institute.middleware';
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 const mockUser = {
   id:              'user-1',
-  email:           'admin@hummyfly.com',
+  email:           'admin@digital_hotel.com',
   username:        'admin',
   password_hash:   '$2b$10$hashed',
   is_active:       true,

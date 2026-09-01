@@ -109,3 +109,60 @@ export const clock_in_qr = async (req: AuthenticatedRequest, res: Response, next
     res.status(201).json({ message: "Geofenced Clock-In successful", data: attendance });
   } catch (error) { next(error); }
 };
+
+// ==========================================
+// Admin / Management Methods
+// ==========================================
+
+export const get_attendance_logs = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const branchId = req.user?.branch_id || req.body.branch_id || req.query.branch_id;
+    if (!branchId) return res.status(400).json({ message: "Branch ID required" });
+
+    const logs = await prisma.staffAttendance.findMany({
+      where: { branch_id: branchId as string },
+      include: { employee: true },
+      orderBy: { date: 'desc' }
+    });
+    res.status(200).json({ data: logs });
+  } catch (error) { next(error); }
+};
+
+export const manual_create = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const branchId = req.user?.branch_id || req.body.branch_id;
+    const { employee_id, date, clock_in, clock_out, status } = req.body;
+    
+    if (!employee_id || !date) return res.status(400).json({ message: "Missing required fields" });
+
+    const attendance = await prisma.staffAttendance.create({
+      data: {
+        employee_id,
+        branch_id: branchId,
+        date: new Date(date),
+        clock_in: clock_in ? new Date(clock_in) : null,
+        clock_out: clock_out ? new Date(clock_out) : null,
+        status: status || 'PRESENT'
+      }
+    });
+    res.status(201).json({ data: attendance });
+  } catch (error) { next(error); }
+};
+
+export const manual_update = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { date, clock_in, clock_out, status } = req.body;
+
+    const attendance = await prisma.staffAttendance.update({
+      where: { id },
+      data: {
+        ...(date && { date: new Date(date) }),
+        ...(clock_in && { clock_in: new Date(clock_in) }),
+        ...(clock_out && { clock_out: new Date(clock_out) }),
+        ...(status && { status })
+      }
+    });
+    res.status(200).json({ data: attendance });
+  } catch (error) { next(error); }
+};

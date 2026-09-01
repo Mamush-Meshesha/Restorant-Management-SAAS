@@ -114,7 +114,15 @@ export const send_message = async (req: AuthenticatedRequest, res: Response, nex
       }
     });
 
-    res.status(201).json({ data: message });
+    const formattedMessage = {
+      id: message.id,
+      senderId: message.sender_id,
+      text: message.content,
+      timestamp: message.created_at,
+      read: message.is_read
+    };
+
+    res.status(201).json({ data: formattedMessage });
   } catch (error) {
     next(error);
   }
@@ -122,11 +130,20 @@ export const send_message = async (req: AuthenticatedRequest, res: Response, nex
 
 export const start_conversation = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { targetUserId } = req.body;
+    let { targetUserId } = req.body;
     const userId = req.user?.id;
     const orgId = req.user?.organizationId || req.user?.instituteId;
 
-    if (!targetUserId || !orgId) return res.status(400).json({ message: "Missing target user or organization" });
+    if (!orgId) return res.status(400).json({ message: "Missing organization" });
+
+    if (!targetUserId) {
+      // Auto-assign to a company admin or branch manager in the org
+      const admin = await prisma.user.findFirst({
+        where: { organization_id: orgId, role: { name: { in: ['COMPANY_ADMIN', 'SUPERADMIN', 'BRANCH_MANAGER'] } } }
+      });
+      if (!admin) return res.status(404).json({ message: "No support staff available" });
+      targetUserId = admin.id;
+    }
 
     // Check if conversation already exists between these two exact users
     // This is a simplified check, works best for 1-on-1 chats

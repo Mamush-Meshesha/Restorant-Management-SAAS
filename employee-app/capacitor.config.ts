@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.hummyfly.employeeapp',
+  appId: 'com.digitalhotel.employeeapp',
   appName: 'Employee App',
   webDir: '../frontend/dist',
   server: {

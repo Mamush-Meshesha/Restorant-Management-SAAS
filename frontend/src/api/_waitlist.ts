@@ -35,3 +35,6 @@ export const updateWaitlistStatus = (
   status: "WAITING" | "NOTIFIED" | "SEATED" | "LEFT"
 ): Promise<AxiosResponse<{ message: string; data: WaitlistItem }>> =>
   api.put(`/waitlist/${id}/status`, { status });
+
+export const seatWaitlistParty = (id: string, tableId: string) =>
+  api.post(`/waitlist/${id}/seat`, { table_id: tableId });

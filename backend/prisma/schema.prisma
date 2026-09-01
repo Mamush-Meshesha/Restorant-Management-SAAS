@@ -7,122 +7,131 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---------------------------------------------------------
-// CORE & TENANT MODELS
-// ---------------------------------------------------------
-
 model Organization {
-  id         String   @id @default(uuid())
-  name       String
-  logo       String?
-  address    String?
-  phone      String?
-  email      String?
-  website    String?
-  tax_id     String?
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  is_active  Boolean  @default(true)
-
-  branches    Branch[]
-  fiscalYears FiscalYear[]
-  users       User[]
-  roles       Role[]
-  auditLogs   AuditLog[]
-  subscription Subscription?
-  notifications Notification[]
+  id            String         @id @default(uuid())
+  name          String
+  logo          String?
+  address       String?
+  phone         String?
+  email         String?
+  website       String?
+  tax_id        String?
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  is_active     Boolean        @default(true)
+  auditLogs     AuditLog[]
+  branches      Branch[]
   conversations Conversation[]
+  fiscalYears   FiscalYear[]
+  notifications Notification[]
+  roles         Role[]
+  subscription  Subscription?
+  users         User[]
 
   @@map("organizations")
 }
 
 model Branch {
-  id              String   @id @default(uuid())
-  organization_id String
-  name            String
-  code            String?
-  address         String?
-  phone           String?
-  email           String?
-  latitude        Float?
-  longitude       Float?
-  wifi_ip         String? // The public IP address of the restaurant's WiFi network
-  qr_secret_key   String? // A secret key to generate rolling TOTP QR codes
-  is_active       Boolean  @default(true)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-
-  users           User[]
-  diningAreas     DiningArea[]
-  orders          Order[]
-  inventoryItems  InventoryItem[]
-  expenses        Expense[]
-  menuQRCodes     MenuQRCode[]
-  staffAttendance StaffAttendance[]
-  taxConfigs      TaxConfig[]
-  revenueReports  RevenueReport[]
-  kitchenStations KitchenStation[]
-  tables          Table[]
+  id                 String              @id @default(uuid())
+  organization_id    String
+  name               String
+  code               String?
+  address            String?
+  phone              String?
+  email              String?
+  opening_time       String?             @default("09:00")
+  closing_time       String?             @default("22:00")
+  latitude           Float?
+  longitude          Float?
+  wifi_ip            String?
+  qr_secret_key      String?
+  is_active          Boolean             @default(true)
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+  organization       Organization        @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  cashDrawerSessions CashDrawerSession[]
+  diningAreas        DiningArea[]
+  expenses           Expense[]
+  inventoryItems     InventoryItem[]
+  kitchenStations    KitchenStation[]
+  menuQRCodes        MenuQRCode[]
+  orders             Order[]
+  revenueReports     RevenueReport[]
+  staffAttendance    StaffAttendance[]
+  tables             Table[]
+  taxConfigs         TaxConfig[]
+  users              User[]
 
   @@map("branches")
 }
 
 model FiscalYear {
-  id              String   @id @default(uuid())
+  id              String       @id @default(uuid())
   organization_id String
   name            String
   start_date      DateTime
   end_date        DateTime
-  is_current      Boolean  @default(false)
-  created_at      DateTime @default(now())
-
-  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  is_current      Boolean      @default(false)
+  created_at      DateTime     @default(now())
+  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
   @@map("fiscal_years")
 }
 
-// ---------------------------------------------------------
-// AUTHENTICATION & AUTHORIZATION
-// ---------------------------------------------------------
+model RevokedToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@map("revoked_tokens")
+}
 
 model User {
-  id              String    @id @default(uuid())
-  organization_id String
-  branch_id       String?
-  role_id         String
-  username        String    @unique
-  email           String    @unique
-  password_hash   String
-  first_name      String?
-  last_name       String?
-  is_active       Boolean   @default(true)
-  last_login      DateTime?
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organization_id], references: [id])
-  branch       Branch?      @relation(fields: [branch_id], references: [id])
-  role         Role         @relation(fields: [role_id], references: [id])
-  auditLogs    AuditLog[]
-  notifications       Notification[]
-  conversationMembers ConversationMember[]
-  messagesSent        Message[]
+  id                    String               @id @default(uuid())
+  organization_id       String
+  branch_id             String?
+  role_id               String
+  username              String               @unique
+  email                 String               @unique
+  password_hash         String
+  first_name            String?
+  last_name             String?
+  is_active             Boolean              @default(true)
+  last_login            DateTime?
+  failed_login_attempts Int                  @default(0)
+  locked_until          DateTime?
+  password_changed_at   DateTime?
+  is_verified           Boolean              @default(false)
+  verification_token    String?
+  created_at            DateTime             @default(now())
+  updated_at            DateTime             @updatedAt
+  is_2fa_enabled        Boolean              @default(false)
+  two_factor_code       String?
+  two_factor_expires    DateTime?
+  auditLogs             AuditLog[]
+  drawersClosed         CashDrawerSession[]  @relation("DrawerClosedBy")
+  drawersOpened         CashDrawerSession[]  @relation("DrawerOpenedBy")
+  conversationMembers   ConversationMember[]
+  messagesSent          Message[]
+  notifications         Notification[]
+  branch                Branch?              @relation(fields: [branch_id], references: [id])
+  organization          Organization         @relation(fields: [organization_id], references: [id])
+  role                  Role                 @relation(fields: [role_id], references: [id])
+  voidLogs              VoidLog[]
 
   @@map("users")
 }
 
 model Role {
-  id              String   @id @default(uuid())
+  id              String       @id @default(uuid())
   organization_id String
   name            String
   description     String?
-  created_at      DateTime @default(now())
-
-  organization Organization @relation(fields: [organization_id], references: [id])
-  users        User[]
-  permissions  Permission[]
+  created_at      DateTime     @default(now())
+  permissions     Permission[]
+  organization    Organization @relation(fields: [organization_id], references: [id])
+  users           User[]
 
   @@unique([organization_id, name])
   @@map("roles")
@@ -131,20 +140,19 @@ model Role {
 model Permission {
   id          String  @id @default(uuid())
   role_id     String
-  feature_key String // e.g., 'MENU_ITEMS', 'ORDERS'
+  feature_key String
   can_create  Boolean @default(false)
   can_read    Boolean @default(false)
   can_update  Boolean @default(false)
   can_delete  Boolean @default(false)
-
-  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  role        Role    @relation(fields: [role_id], references: [id], onDelete: Cascade)
 
   @@unique([role_id, feature_key])
   @@map("permissions")
 }
 
 model AuditLog {
-  id              String   @id @default(uuid())
+  id              String       @id @default(uuid())
   organization_id String
   user_id         String?
   action          String
@@ -152,82 +160,73 @@ model AuditLog {
   entity_id       String?
   details         Json?
   ip_address      String?
-  created_at      DateTime @default(now())
-
-  organization Organization @relation(fields: [organization_id], references: [id])
-  user         User?        @relation(fields: [user_id], references: [id])
+  created_at      DateTime     @default(now())
+  organization    Organization @relation(fields: [organization_id], references: [id])
+  user            User?        @relation(fields: [user_id], references: [id])
 
   @@map("audit_logs")
 }
 
-// ---------------------------------------------------------
-// MENU & RECIPE MODELS
-// ---------------------------------------------------------
-
 model MenuCategory {
-  id              String  @id @default(uuid())
+  id              String         @id @default(uuid())
   organization_id String
   name            String
   description     String?
   image_url       String?
-  display_order   Int     @default(0)
-  is_active       Boolean @default(true)
+  display_order   Int            @default(0)
+  is_active       Boolean        @default(true)
   parent_id       String?
-
-  items           MenuItem[]
   parentCategory  MenuCategory?  @relation("SubCategories", fields: [parent_id], references: [id])
   subcategories   MenuCategory[] @relation("SubCategories")
+  items           MenuItem[]
 
   @@map("menu_categories")
 }
 
 model MenuItem {
-  id               String   @id @default(uuid())
+  id               String                 @id @default(uuid())
   category_id      String
   name             String
   description      String?
   base_price       Float
   image_url        String?
-  is_vegetarian    Boolean  @default(false)
-  is_vegan         Boolean  @default(false)
-  is_gluten_free   Boolean  @default(false)
+  is_vegetarian    Boolean                @default(false)
+  is_vegan         Boolean                @default(false)
+  is_gluten_free   Boolean                @default(false)
   allergens        String[]
   calories         Int?
-  preparation_time Int? // in minutes
-  is_available     Boolean  @default(true)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-
-  category   MenuCategory           @relation(fields: [category_id], references: [id])
-  variants   MenuItemVariant[]
-  addons     MenuItemAddon[]
-  orderItems OrderItem[]
-  recipes    Recipe[]
-  schedules  AvailabilitySchedule[]
+  preparation_time Int?
+  is_available     Boolean                @default(true)
+  created_at       DateTime               @default(now())
+  updated_at       DateTime               @updatedAt
+  schedules        AvailabilitySchedule[]
+  addons           MenuItemAddon[]
+  variants         MenuItemVariant[]
+  category         MenuCategory           @relation(fields: [category_id], references: [id])
+  orderItems       OrderItem[]
+  recipes          Recipe[]
 
   @@map("menu_items")
 }
 
 model MenuItemVariant {
-  id               String  @id @default(uuid())
+  id               String      @id @default(uuid())
   menu_item_id     String
-  name             String // e.g., Small, Large
-  price_adjustment Float // Difference from base_price (e.g., +2.00)
-  is_active        Boolean @default(true)
-
-  menuItem   MenuItem    @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
+  name             String
+  price_adjustment Float
+  is_active        Boolean     @default(true)
+  menuItem         MenuItem    @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
+  orderItems       OrderItem[]
 
   @@map("menu_item_variants")
 }
 
 model MenuItemAddon {
-  id           String  @id @default(uuid())
-  menu_item_id String
-  name         String
-  price        Float
-  is_active    Boolean @default(true)
-
+  id              String           @id @default(uuid())
+  menu_item_id    String
+  name            String
+  price           Float
+  is_active       Boolean          @default(true)
   menuItem        MenuItem         @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
   orderItemAddons OrderItemAddon[]
 
@@ -246,54 +245,46 @@ model ComboMeal {
 }
 
 model Recipe {
-  id           String  @id @default(uuid())
+  id           String             @id @default(uuid())
   menu_item_id String
   instructions String?
-  prep_time    Int? // minutes
-  cook_time    Int? // minutes
-
-  menuItem    MenuItem           @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
-  ingredients RecipeIngredient[]
+  prep_time    Int?
+  cook_time    Int?
+  ingredients  RecipeIngredient[]
+  menuItem     MenuItem           @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
 
   @@map("recipes")
 }
 
 model RecipeIngredient {
-  id                String @id @default(uuid())
+  id                String        @id @default(uuid())
   recipe_id         String
   inventory_item_id String
   quantity          Float
   unit              String
-
-  recipe        Recipe        @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
-  inventoryItem InventoryItem @relation(fields: [inventory_item_id], references: [id])
+  inventoryItem     InventoryItem @relation(fields: [inventory_item_id], references: [id])
+  recipe            Recipe        @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
 
   @@map("recipe_ingredients")
 }
 
 model AvailabilitySchedule {
-  id           String @id @default(uuid())
+  id           String   @id @default(uuid())
   menu_item_id String
-  day_of_week  Int // 0=Sunday, 1=Monday...
-  start_time   String // "09:00"
-  end_time     String // "11:00"
-
-  menuItem MenuItem @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
+  day_of_week  Int
+  start_time   String
+  end_time     String
+  menuItem     MenuItem @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
 
   @@map("availability_schedules")
 }
 
-// ---------------------------------------------------------
-// FLOOR & TABLE MODELS
-// ---------------------------------------------------------
-
 model DiningArea {
-  id          String  @id @default(uuid())
+  id          String       @id @default(uuid())
   branch_id   String
-  name        String // e.g., "Main Floor", "Patio"
+  name        String
   description String?
-  is_active   Boolean @default(true)
-
+  is_active   Boolean      @default(true)
   branch      Branch       @relation(fields: [branch_id], references: [id])
   tableGroups TableGroup[]
   tables      Table[]
@@ -302,91 +293,89 @@ model DiningArea {
 }
 
 model TableGroup {
-  id             String @id @default(uuid())
+  id             String     @id @default(uuid())
   dining_area_id String
-  name           String // e.g., "Window Seats", "Bar Area"
-
-  diningArea DiningArea @relation(fields: [dining_area_id], references: [id], onDelete: Cascade)
-  tables     Table[]
+  name           String
+  diningArea     DiningArea @relation(fields: [dining_area_id], references: [id], onDelete: Cascade)
+  tables         Table[]
 
   @@map("table_groups")
 }
 
 model TableType {
-  id              String @id @default(uuid())
+  id              String  @id @default(uuid())
   organization_id String
-  name            String // e.g., "Booth", "High Top", "Standard"
-
-  tables Table[]
+  name            String
+  tables          Table[]
 
   @@map("table_types")
 }
 
 model Table {
-  id             String  @id @default(uuid())
+  id             String         @id @default(uuid())
   branch_id      String
   dining_area_id String
   table_group_id String?
   table_type_id  String?
-  name           String // e.g., "T-12"
-  capacity       Int     @default(2)
-  status         String  @default("AVAILABLE") // AVAILABLE, OCCUPIED, RESERVED, DIRTY
-  x_pos          Float? // For floor plan UI
-  y_pos          Float? // For floor plan UI
-
-  branch     Branch      @relation(fields: [branch_id], references: [id])
-  diningArea DiningArea  @relation(fields: [dining_area_id], references: [id])
-  tableGroup TableGroup? @relation(fields: [table_group_id], references: [id])
-  tableType  TableType?  @relation(fields: [table_type_id], references: [id])
-
-  orders       Order[]
-  reservations Reservation[]
-  menuQRCodes  MenuQRCode[]
-  sessions     TableSession[]
+  name           String
+  capacity       Int            @default(2)
+  status         String         @default("AVAILABLE")
+  x_pos          Float?
+  y_pos          Float?
+  rotation       Float?         @default(0)
+  scale_x        Float?         @default(1)
+  scale_y        Float?         @default(1)
+  menuQRCodes    MenuQRCode[]
+  orders         Order[]
+  reservations   Reservation[]
+  sessions       TableSession[]
+  branch         Branch         @relation(fields: [branch_id], references: [id])
+  diningArea     DiningArea     @relation(fields: [dining_area_id], references: [id])
+  tableGroup     TableGroup?    @relation(fields: [table_group_id], references: [id])
+  tableType      TableType?     @relation(fields: [table_type_id], references: [id])
 
   @@map("tables")
 }
 
 model TableSession {
-  id         String   @id @default(uuid())
+  id         String              @id @default(uuid())
   table_id   String
-  status     String   @default("OPEN") // OPEN, CLOSED
-  token      String   @unique
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  table Table @relation(fields: [table_id], references: [id])
-  guests TableSessionGuest[]
+  status     String              @default("OPEN")
+  token      String              @unique
+  created_at DateTime            @default(now())
+  updated_at DateTime            @updatedAt
+  guests     TableSessionGuest[]
+  table      Table               @relation(fields: [table_id], references: [id])
 
   @@map("table_sessions")
 }
 
 model TableSessionGuest {
-  id               String   @id @default(uuid())
+  id               String       @id @default(uuid())
   table_session_id String
   customer_id      String
-  joined_at        DateTime @default(now())
-
-  session  TableSession @relation(fields: [table_session_id], references: [id])
-  customer Customer     @relation(fields: [customer_id], references: [id])
+  joined_at        DateTime     @default(now())
+  customer         Customer     @relation(fields: [customer_id], references: [id])
+  session          TableSession @relation(fields: [table_session_id], references: [id])
 
   @@map("table_session_guests")
 }
 
 model Reservation {
-  id               String   @id @default(uuid())
+  id               String    @id @default(uuid())
   table_id         String
   customer_id      String?
   customer_name    String
   customer_phone   String
   reservation_time DateTime
   guest_count      Int
-  status           String   @default("PENDING") // PENDING, CONFIRMED, SEATED, CANCELLED
+  status           String    @default("PENDING")
+  deposit_amount   Float     @default(0)
+  payment_status   String    @default("PENDING")
   special_requests String?
-  created_at       DateTime @default(now())
-
-  table    Table     @relation(fields: [table_id], references: [id])
-  customer Customer? @relation(fields: [customer_id], references: [id])
+  created_at       DateTime  @default(now())
+  customer         Customer? @relation(fields: [customer_id], references: [id])
+  table            Table     @relation(fields: [table_id], references: [id])
 
   @@map("reservations")
 }
@@ -397,121 +386,151 @@ model Waitlist {
   customer_name  String
   customer_phone String
   guest_count    Int
-  quoted_time    Int? // estimated wait time in minutes
-  status         String   @default("WAITING") // WAITING, NOTIFIED, SEATED, LEFT
+  quoted_time    Int?
+  status         String   @default("WAITING")
+  deposit_amount Float    @default(0)
+  payment_status String   @default("PENDING")
   created_at     DateTime @default(now())
 
   @@map("waitlists")
 }
 
-// ---------------------------------------------------------
-// ORDER & POS MODELS
-// ---------------------------------------------------------
-
 model Order {
-  id             String   @id @default(uuid())
+  id             String         @id @default(uuid())
   branch_id      String
-  table_id       String? // Null for takeaway/delivery
+  table_id       String?
   customer_id    String?
   waiter_id      String?
-  order_type     String   @default("DINE_IN") // DINE_IN, TAKEAWAY, DELIVERY
-  status         String   @default("OPEN") // OPEN, IN_PROGRESS, READY, SERVED, CLOSED, CANCELLED
-  guest_count    Int      @default(1)
-  subtotal       Float    @default(0)
-  tax_total      Float    @default(0)
-  discount_total Float    @default(0)
-  total_amount   Float    @default(0)
+  order_type     String         @default("DINE_IN")
+  status         String         @default("OPEN")
+  guest_count    Int            @default(1)
+  subtotal       Float          @default(0)
+  tax_total      Float          @default(0)
+  discount_total Float          @default(0)
+  total_amount   Float          @default(0)
   notes          String?
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-
-  branch   Branch    @relation(fields: [branch_id], references: [id])
-  table    Table?    @relation(fields: [table_id], references: [id])
-  customer Customer? @relation(fields: [customer_id], references: [id])
-
-  items    OrderItem[]
-  bills    Bill[]
-  delivery DeliveryOrder?
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  bills          Bill[]
+  delivery       DeliveryOrder?
+  items          OrderItem[]
+  branch         Branch         @relation(fields: [branch_id], references: [id])
+  customer       Customer?      @relation(fields: [customer_id], references: [id])
+  table          Table?         @relation(fields: [table_id], references: [id])
 
   @@map("orders")
 }
 
 model OrderItem {
-  id           String   @id @default(uuid())
-  order_id     String
-  menu_item_id String
-  variant_id   String?
-  quantity     Int      @default(1)
-  unit_price   Float
-  total_price  Float
-  status           String   @default("PENDING") // PENDING, PREPARING, READY, SERVED
-  notes            String?
-  ordered_by_id    String?
-  paid_by_id       String?
-  created_at       DateTime @default(now())
-
-  order    Order            @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  menuItem MenuItem         @relation(fields: [menu_item_id], references: [id])
-  variant  MenuItemVariant? @relation(fields: [variant_id], references: [id])
-  orderedBy Customer?       @relation("OrderedItems", fields: [ordered_by_id], references: [id])
-  paidBy    Customer?       @relation("PaidItems", fields: [paid_by_id], references: [id])
-
-  addons        OrderItemAddon[]
+  id            String           @id @default(uuid())
+  order_id      String
+  menu_item_id  String
+  variant_id    String?
+  quantity      Int              @default(1)
+  unit_price    Float
+  total_price   Float
+  status        String           @default("PENDING")
+  notes         String?
+  ordered_by_id String?
+  paid_by_id    String?
+  created_at    DateTime         @default(now())
   kitchenOrders KitchenOrder[]
+  addons        OrderItemAddon[]
+  menuItem      MenuItem         @relation(fields: [menu_item_id], references: [id])
+  order         Order            @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  orderedBy     Customer?        @relation("OrderedItems", fields: [ordered_by_id], references: [id])
+  paidBy        Customer?        @relation("PaidItems", fields: [paid_by_id], references: [id])
+  variant       MenuItemVariant? @relation(fields: [variant_id], references: [id])
+  voidLogs      VoidLog[]
 
   @@map("order_items")
 }
 
 model OrderItemAddon {
-  id            String @id @default(uuid())
+  id            String        @id @default(uuid())
   order_item_id String
   addon_id      String
   price         Float
-
-  orderItem OrderItem     @relation(fields: [order_item_id], references: [id], onDelete: Cascade)
-  addon     MenuItemAddon @relation(fields: [addon_id], references: [id])
+  addon         MenuItemAddon @relation(fields: [addon_id], references: [id])
+  orderItem     OrderItem     @relation(fields: [order_item_id], references: [id], onDelete: Cascade)
 
   @@map("order_item_addons")
 }
 
 model Bill {
-  id              String   @id @default(uuid())
+  id              String          @id @default(uuid())
   order_id        String
-  bill_number     String   @unique
+  bill_number     String          @unique
   subtotal        Float
   tax_amount      Float
   discount_amount Float
-  service_charge  Float    @default(0)
+  service_charge  Float           @default(0)
+  tip_amount      Float           @default(0)
   total_amount    Float
-  status          String   @default("UNPAID") // UNPAID, PARTIAL, PAID
-  created_at      DateTime @default(now())
-
-  order          Order           @relation(fields: [order_id], references: [id])
-  transactions   Transaction[]
-  paymentQRCodes PaymentQRCode[]
+  status          String          @default("UNPAID")
+  created_at      DateTime        @default(now())
+  order           Order           @relation(fields: [order_id], references: [id])
+  paymentQRCodes  PaymentQRCode[]
+  transactions    Transaction[]
 
   @@map("bills")
 }
 
 model Transaction {
-  id             String   @id @default(uuid())
-  bill_id        String
-  payment_method String // CASH, CARD, MOBILE, QR
-  amount         Float
-  reference_no   String?
-  status         String   @default("COMPLETED") // PENDING, COMPLETED, FAILED, REFUNDED
-  created_at     DateTime @default(now())
-
-  bill Bill @relation(fields: [bill_id], references: [id])
+  id                     String             @id @default(uuid())
+  bill_id                String
+  payment_method         String
+  amount                 Float
+  tip_amount             Float              @default(0)
+  reference_no           String?
+  status                 String             @default("COMPLETED")
+  created_at             DateTime           @default(now())
+  cash_drawer_session_id String?
+  bill                   Bill               @relation(fields: [bill_id], references: [id])
+  cashDrawerSession      CashDrawerSession? @relation(fields: [cash_drawer_session_id], references: [id])
 
   @@map("transactions")
+}
+
+model CashDrawerSession {
+  id             String        @id @default(uuid())
+  branch_id      String
+  opened_by_id   String
+  closed_by_id   String?
+  starting_float Float
+  expected_cash  Float         @default(0)
+  actual_cash    Float?
+  variance       Float?
+  status         String        @default("OPEN")
+  opened_at      DateTime      @default(now())
+  closed_at      DateTime?
+  notes          String?
+  branch         Branch        @relation(fields: [branch_id], references: [id])
+  closedBy       User?         @relation("DrawerClosedBy", fields: [closed_by_id], references: [id])
+  openedBy       User          @relation("DrawerOpenedBy", fields: [opened_by_id], references: [id])
+  transactions   Transaction[]
+
+  @@map("cash_drawer_sessions")
+}
+
+model VoidLog {
+  id            String    @id @default(uuid())
+  order_item_id String
+  voided_by_id  String
+  reason        String
+  wasted        Boolean   @default(false)
+  voided_at     DateTime  @default(now())
+  orderItem     OrderItem @relation(fields: [order_item_id], references: [id])
+  voidedBy      User      @relation(fields: [voided_by_id], references: [id])
+
+  @@map("void_logs")
 }
 
 model Discount {
   id              String  @id @default(uuid())
   organization_id String
   name            String
-  type            String // PERCENTAGE, FIXED
+  type            String
   value           Float
   is_active       Boolean @default(true)
 
@@ -530,95 +549,83 @@ model Promotion {
   @@map("promotions")
 }
 
-// ---------------------------------------------------------
-// KITCHEN MODELS
-// ---------------------------------------------------------
-
 model KitchenStation {
-  id        String  @id @default(uuid())
+  id        String         @id @default(uuid())
   branch_id String
-  name      String // e.g., "Grill", "Salad", "Drinks"
-  is_active Boolean @default(true)
-
-  branch Branch         @relation(fields: [branch_id], references: [id])
-  orders KitchenOrder[]
+  name      String
+  is_active Boolean        @default(true)
+  orders    KitchenOrder[]
+  branch    Branch         @relation(fields: [branch_id], references: [id])
 
   @@map("kitchen_stations")
 }
 
 model KitchenOrder {
-  id            String    @id @default(uuid())
+  id            String         @id @default(uuid())
   station_id    String
   order_item_id String
-  status        String    @default("PENDING") // PENDING, PREPARING, READY
+  status        String         @default("PENDING")
   started_at    DateTime?
   completed_at  DateTime?
-
-  station   KitchenStation @relation(fields: [station_id], references: [id])
-  orderItem OrderItem      @relation(fields: [order_item_id], references: [id])
-  timers    PrepTimer[]
+  orderItem     OrderItem      @relation(fields: [order_item_id], references: [id])
+  station       KitchenStation @relation(fields: [station_id], references: [id])
+  timers        PrepTimer[]
 
   @@map("kitchen_orders")
 }
 
 model PrepTimer {
-  id               String   @id @default(uuid())
+  id               String       @id @default(uuid())
   kitchen_order_id String
   duration_mins    Int
   started_at       DateTime
   expires_at       DateTime
-
-  kitchenOrder KitchenOrder @relation(fields: [kitchen_order_id], references: [id])
+  kitchenOrder     KitchenOrder @relation(fields: [kitchen_order_id], references: [id])
 
   @@map("prep_timers")
 }
 
-// ---------------------------------------------------------
-// INVENTORY & PROCUREMENT
-// ---------------------------------------------------------
-
 model InventoryItem {
-  id            String  @id @default(uuid())
-  branch_id     String
-  name          String
-  sku           String?
-  category      String // MEAT, VEG, DAIRY, BEVERAGE
-  unit          String // KG, LITER, PIECE
-  current_stock Float   @default(0)
-  minimum_stock Float   @default(0)
-  cost_per_unit Float   @default(0)
-  is_active     Boolean @default(true)
-
-  branch            Branch              @relation(fields: [branch_id], references: [id])
-  movements         StockMovement[]
-  adjustments       StockAdjustment[]
-  recipeIngredients RecipeIngredient[]
-  poItems           PurchaseOrderItem[]
+  id                    String              @id @default(uuid())
+  branch_id             String
+  name                  String
+  sku                   String?
+  category              String
+  unit                  String
+  base_unit             String              @default("GRAM")
+  conversion_multiplier Float               @default(1000)
+  current_stock         Float               @default(0)
+  minimum_stock         Float               @default(0)
+  cost_per_unit         Float               @default(0)
+  is_active             Boolean             @default(true)
+  branch                Branch              @relation(fields: [branch_id], references: [id])
+  poItems               PurchaseOrderItem[]
+  recipeIngredients     RecipeIngredient[]
+  adjustments           StockAdjustment[]
+  movements             StockMovement[]
 
   @@map("inventory_items")
 }
 
 model StockMovement {
-  id         String   @id @default(uuid())
+  id         String        @id @default(uuid())
   item_id    String
-  type       String // IN, OUT
+  type       String
   quantity   Float
-  reference  String? // PO number, Recipe usage
-  created_at DateTime @default(now())
-
-  item InventoryItem @relation(fields: [item_id], references: [id])
+  reference  String?
+  created_at DateTime      @default(now())
+  item       InventoryItem @relation(fields: [item_id], references: [id])
 
   @@map("stock_movements")
 }
 
 model StockAdjustment {
-  id               String   @id @default(uuid())
+  id               String        @id @default(uuid())
   item_id          String
-  quantity_changed Float // + or -
-  reason           String // DAMAGE, SPOILAGE, COUNT_CORRECTION
-  created_at       DateTime @default(now())
-
-  item InventoryItem @relation(fields: [item_id], references: [id])
+  quantity_changed Float
+  reason           String
+  created_at       DateTime      @default(now())
+  item             InventoryItem @relation(fields: [item_id], references: [id])
 
   @@map("stock_adjustments")
 }
@@ -636,97 +643,87 @@ model WasteLog {
 }
 
 model Supplier {
-  id              String  @id @default(uuid())
+  id              String          @id @default(uuid())
   organization_id String
   name            String
   contact_person  String?
   phone           String?
   email           String?
   address         String?
-  is_active       Boolean @default(true)
-
-  purchaseOrders PurchaseOrder[]
+  is_active       Boolean         @default(true)
+  purchaseOrders  PurchaseOrder[]
 
   @@map("suppliers")
 }
 
 model PurchaseOrder {
-  id            String    @id @default(uuid())
+  id            String              @id @default(uuid())
   supplier_id   String
-  po_number     String    @unique
-  status        String    @default("DRAFT") // DRAFT, SENT, PARTIAL, DELIVERED, CANCELLED
-  total_amount  Float     @default(0)
+  po_number     String              @unique
+  status        String              @default("DRAFT")
+  total_amount  Float               @default(0)
   expected_date DateTime?
-  created_at    DateTime  @default(now())
-
-  supplier      Supplier            @relation(fields: [supplier_id], references: [id])
-  items         PurchaseOrderItem[]
+  created_at    DateTime            @default(now())
   receivingLogs GoodsReceiving[]
+  items         PurchaseOrderItem[]
+  supplier      Supplier            @relation(fields: [supplier_id], references: [id])
 
   @@map("purchase_orders")
 }
 
 model PurchaseOrderItem {
-  id                String @id @default(uuid())
+  id                String        @id @default(uuid())
   po_id             String
   inventory_item_id String
   quantity          Float
   unit_price        Float
   total_price       Float
-
-  po   PurchaseOrder @relation(fields: [po_id], references: [id], onDelete: Cascade)
-  item InventoryItem @relation(fields: [inventory_item_id], references: [id])
+  item              InventoryItem @relation(fields: [inventory_item_id], references: [id])
+  po                PurchaseOrder @relation(fields: [po_id], references: [id], onDelete: Cascade)
 
   @@map("purchase_order_items")
 }
 
 model GoodsReceiving {
-  id            String   @id @default(uuid())
+  id            String        @id @default(uuid())
   po_id         String
-  received_date DateTime @default(now())
+  received_date DateTime      @default(now())
   received_by   String
   notes         String?
-
-  po PurchaseOrder @relation(fields: [po_id], references: [id])
+  po            PurchaseOrder @relation(fields: [po_id], references: [id])
 
   @@map("goods_receiving")
 }
 
-// ---------------------------------------------------------
-// CUSTOMER & LOYALTY
-// ---------------------------------------------------------
-
 model Customer {
-  id              String   @id @default(uuid())
+  id              String               @id @default(uuid())
   organization_id String
   tier_id         String?
   first_name      String
   last_name       String?
-  phone           String   @unique
+  phone           String               @unique
   email           String?
-  loyalty_points  Int      @default(0)
-  created_at      DateTime @default(now())
-
-  tier           CustomerTier?        @relation(fields: [tier_id], references: [id])
-  orders         Order[]
-  reservations   Reservation[]
-  loyaltyHistory LoyaltyTransaction[]
-  
-  itemsOrdered  OrderItem[] @relation("OrderedItems")
-  itemsPaid     OrderItem[] @relation("PaidItems")
-  tableSessions TableSessionGuest[]
+  loyalty_points  Int                  @default(0)
+  created_at      DateTime             @default(now())
+  tier            CustomerTier?        @relation(fields: [tier_id], references: [id])
+  loyaltyHistory  LoyaltyTransaction[]
+  itemsOrdered    OrderItem[]          @relation("OrderedItems")
+  itemsPaid       OrderItem[]          @relation("PaidItems")
+  orders          Order[]
+  reservations    Reservation[]
+  tableSessions   TableSessionGuest[]
+  customerSubscriptions CustomerSubscription[]
 
   @@map("customers")
 }
 
 model CustomerTier {
-  id              String @id @default(uuid())
+  id              String     @id @default(uuid())
   organization_id String
-  name            String // Silver, Gold, Platinum
-  min_points      Int    @default(0)
-  discount_rate   Float  @default(0)
-
-  customers Customer[]
+  name            String
+  min_points      Int        @default(0)
+  discount_rate   Float      @default(0)
+  customers       Customer[]
 
   @@map("customer_tiers")
 }
@@ -734,7 +731,7 @@ model CustomerTier {
 model LoyaltyProgram {
   id                  String  @id @default(uuid())
   organization_id     String
-  points_per_currency Float   @default(1) // 1 point per 10 ETB etc
+  points_per_currency Float   @default(1)
   min_redemption      Int     @default(100)
   is_active           Boolean @default(true)
 
@@ -744,55 +741,47 @@ model LoyaltyProgram {
 model LoyaltyTransaction {
   id          String   @id @default(uuid())
   customer_id String
-  points      Int // + for earn, - for redeem
-  type        String // EARN, REDEEM
-  reference   String? // Order ID
+  points      Int
+  type        String
+  reference   String?
   created_at  DateTime @default(now())
-
-  customer Customer @relation(fields: [customer_id], references: [id])
+  customer    Customer @relation(fields: [customer_id], references: [id])
 
   @@map("loyalty_transactions")
 }
 
-// ---------------------------------------------------------
-// EMPLOYEE & HR
-// ---------------------------------------------------------
-
 model Department {
-  id              String  @id @default(uuid())
+  id              String     @id @default(uuid())
   organization_id String
-  name            String // FOH, BOH, Admin
-  is_active       Boolean @default(true)
-
-  employees Employee[]
+  name            String
+  is_active       Boolean    @default(true)
+  employees       Employee[]
 
   @@map("departments")
 }
 
 model Position {
-  id              String  @id @default(uuid())
+  id              String     @id @default(uuid())
   organization_id String
-  name            String // Waiter, Chef, Manager
+  name            String
   base_salary     Float?
-  is_active       Boolean @default(true)
-
-  employees Employee[]
+  is_active       Boolean    @default(true)
+  employees       Employee[]
 
   @@map("positions")
 }
 
 model EmploymentType {
-  id              String @id @default(uuid())
+  id              String     @id @default(uuid())
   organization_id String
-  name            String // Full-Time, Part-Time, Contract
-
-  employees Employee[]
+  name            String
+  employees       Employee[]
 
   @@map("employment_types")
 }
 
 model Employee {
-  id                 String   @id @default(uuid())
+  id                 String            @id @default(uuid())
   organization_id    String
   department_id      String
   position_id        String
@@ -802,27 +791,24 @@ model Employee {
   phone              String?
   email              String?
   hire_date          DateTime
-  is_active          Boolean  @default(true)
-  created_at         DateTime @default(now())
-
-  department     Department     @relation(fields: [department_id], references: [id])
-  position       Position       @relation(fields: [position_id], references: [id])
-  employmentType EmploymentType @relation(fields: [employment_type_id], references: [id])
-
-  shifts      ShiftAssignment[]
-  attendances StaffAttendance[]
+  is_active          Boolean           @default(true)
+  created_at         DateTime          @default(now())
+  department         Department        @relation(fields: [department_id], references: [id])
+  employmentType     EmploymentType    @relation(fields: [employment_type_id], references: [id])
+  position           Position          @relation(fields: [position_id], references: [id])
+  shifts             ShiftAssignment[]
+  attendances        StaffAttendance[]
 
   @@map("employees")
 }
 
 model Shift {
-  id              String @id @default(uuid())
+  id              String            @id @default(uuid())
   organization_id String
-  name            String // Morning, Evening
-  start_time      String // "08:00"
-  end_time        String // "16:00"
-
-  assignments ShiftAssignment[]
+  name            String
+  start_time      String
+  end_time        String
+  assignments     ShiftAssignment[]
 
   @@map("shifts")
 }
@@ -832,34 +818,28 @@ model ShiftAssignment {
   employee_id String
   shift_id    String
   date        DateTime
-
-  employee Employee @relation(fields: [employee_id], references: [id])
-  shift    Shift    @relation(fields: [shift_id], references: [id])
+  employee    Employee @relation(fields: [employee_id], references: [id])
+  shift       Shift    @relation(fields: [shift_id], references: [id])
 
   @@map("shift_assignments")
 }
 
 model StaffAttendance {
-  id          String    @id @default(uuid())
-  employee_id String
-  branch_id   String
-  date        DateTime
-  clock_in    DateTime?
-  clock_out      DateTime?
-  status         String    @default("PRESENT") // PRESENT, LATE, ABSENT
-  clock_in_ip    String?
-  clock_in_lat   Float?
-  clock_in_lng   Float?
-
-  employee Employee @relation(fields: [employee_id], references: [id])
-  branch   Branch   @relation(fields: [branch_id], references: [id])
+  id           String    @id @default(uuid())
+  employee_id  String
+  branch_id    String
+  date         DateTime
+  clock_in     DateTime?
+  clock_out    DateTime?
+  status       String    @default("PRESENT")
+  clock_in_ip  String?
+  clock_in_lat Float?
+  clock_in_lng Float?
+  branch       Branch    @relation(fields: [branch_id], references: [id])
+  employee     Employee  @relation(fields: [employee_id], references: [id])
 
   @@map("staff_attendances")
 }
-
-// ---------------------------------------------------------
-// DELIVERY MODELS
-// ---------------------------------------------------------
 
 model DeliveryZone {
   id               String  @id @default(uuid())
@@ -874,33 +854,27 @@ model DeliveryZone {
 }
 
 model Driver {
-  id              String  @id @default(uuid())
+  id              String          @id @default(uuid())
   organization_id String
   name            String
   phone           String
   vehicle_type    String?
   vehicle_plate   String?
-  is_active       Boolean @default(true)
-
-  deliveries DeliveryOrder[]
+  is_active       Boolean         @default(true)
+  deliveries      DeliveryOrder[]
 
   @@map("drivers")
 }
 
-// ---------------------------------------------------------
-// NOTIFICATIONS & MESSAGING
-// ---------------------------------------------------------
-
 model Notification {
-  id              String   @id @default(uuid())
+  id              String       @id @default(uuid())
   organization_id String
   user_id         String
   title           String
   message         String
-  type            String   @default("INFO") // INFO, ALERT, ORDER_UPDATE
-  is_read         Boolean  @default(false)
-  created_at      DateTime @default(now())
-
+  type            String       @default("INFO")
+  is_read         Boolean      @default(false)
+  created_at      DateTime     @default(now())
   organization    Organization @relation(fields: [organization_id], references: [id])
   user            User         @relation(fields: [user_id], references: [id])
 
@@ -908,26 +882,24 @@ model Notification {
 }
 
 model Conversation {
-  id              String   @id @default(uuid())
+  id              String               @id @default(uuid())
   organization_id String
-  name            String?  // Optional name for group chats
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  organization    Organization @relation(fields: [organization_id], references: [id])
+  name            String?
+  created_at      DateTime             @default(now())
+  updated_at      DateTime             @updatedAt
   members         ConversationMember[]
+  organization    Organization         @relation(fields: [organization_id], references: [id])
   messages        Message[]
 
   @@map("conversations")
 }
 
 model ConversationMember {
-  id              String   @id @default(uuid())
+  id              String       @id @default(uuid())
   conversation_id String
   user_id         String
-  unread_count    Int      @default(0)
-  joined_at       DateTime @default(now())
-
+  unread_count    Int          @default(0)
+  joined_at       DateTime     @default(now())
   conversation    Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
   user            User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -936,13 +908,12 @@ model ConversationMember {
 }
 
 model Message {
-  id              String   @id @default(uuid())
+  id              String       @id @default(uuid())
   conversation_id String
   sender_id       String
   content         String
-  is_read         Boolean  @default(false)
-  created_at      DateTime @default(now())
-
+  is_read         Boolean      @default(false)
+  created_at      DateTime     @default(now())
   conversation    Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
   sender          User         @relation(fields: [sender_id], references: [id], onDelete: Cascade)
 
@@ -955,41 +926,34 @@ model DeliveryOrder {
   driver_id        String?
   customer_address String
   delivery_fee     Float     @default(0)
-  status           String    @default("PENDING") // PENDING, ASSIGNED, OUT_FOR_DELIVERY, DELIVERED
+  status           String    @default("PENDING")
   estimated_time   DateTime?
   delivered_at     DateTime?
-
-  order  Order   @relation(fields: [order_id], references: [id])
-  driver Driver? @relation(fields: [driver_id], references: [id])
+  driver           Driver?   @relation(fields: [driver_id], references: [id])
+  order            Order     @relation(fields: [order_id], references: [id])
 
   @@map("delivery_orders")
 }
 
-// ---------------------------------------------------------
-// FINANCIAL MODELS
-// ---------------------------------------------------------
-
 model ExpenseCategory {
-  id              String @id @default(uuid())
+  id              String    @id @default(uuid())
   organization_id String
-  name            String // Rent, Utilities, Supplies
-
-  expenses Expense[]
+  name            String
+  expenses        Expense[]
 
   @@map("expense_categories")
 }
 
 model Expense {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   branch_id   String
   category_id String
   amount      Float
   date        DateTime
   reference   String?
   notes       String?
-
-  branch   Branch          @relation(fields: [branch_id], references: [id])
-  category ExpenseCategory @relation(fields: [category_id], references: [id])
+  branch      Branch          @relation(fields: [branch_id], references: [id])
+  category    ExpenseCategory @relation(fields: [category_id], references: [id])
 
   @@map("expenses")
 }
@@ -997,11 +961,10 @@ model Expense {
 model TaxConfig {
   id              String  @id @default(uuid())
   branch_id       String
-  name            String // VAT, Service Tax
+  name            String
   rate_percentage Float
   is_active       Boolean @default(true)
-
-  branch Branch @relation(fields: [branch_id], references: [id])
+  branch          Branch  @relation(fields: [branch_id], references: [id])
 
   @@map("tax_configs")
 }
@@ -1015,164 +978,177 @@ model RevenueReport {
   total_discount Float
   net_revenue    Float
   order_count    Int
-
-  branch Branch @relation(fields: [branch_id], references: [id])
+  branch         Branch   @relation(fields: [branch_id], references: [id])
 
   @@unique([branch_id, date])
   @@map("revenue_reports")
 }
 
-// ---------------------------------------------------------
-// QR CODE MODELS
-// ---------------------------------------------------------
-
 model MenuQRCode {
-  id         String   @id @default(uuid())
+  id         String      @id @default(uuid())
   branch_id  String
-  table_id   String? // Optional: link directly to a table
-  token      String   @unique // The unique slug in the QR URL
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
-
-  branch   Branch      @relation(fields: [branch_id], references: [id])
-  table    Table?      @relation(fields: [table_id], references: [id])
-  scanLogs QRScanLog[]
+  table_id   String?
+  token      String      @unique
+  is_active  Boolean     @default(true)
+  created_at DateTime    @default(now())
+  branch     Branch      @relation(fields: [branch_id], references: [id])
+  table      Table?      @relation(fields: [table_id], references: [id])
+  scanLogs   QRScanLog[]
 
   @@map("menu_qr_codes")
 }
 
 model PaymentQRCode {
-  id         String   @id @default(uuid())
+  id         String      @id @default(uuid())
   bill_id    String
-  token      String   @unique
+  token      String      @unique
   amount     Float
   expires_at DateTime
-  is_paid    Boolean  @default(false)
-  created_at DateTime @default(now())
-
-  bill     Bill        @relation(fields: [bill_id], references: [id])
-  scanLogs QRScanLog[]
+  is_paid    Boolean     @default(false)
+  created_at DateTime    @default(now())
+  bill       Bill        @relation(fields: [bill_id], references: [id])
+  scanLogs   QRScanLog[]
 
   @@map("payment_qr_codes")
 }
 
 model QRScanLog {
-  id                 String   @id @default(uuid())
+  id                 String         @id @default(uuid())
   menu_qr_code_id    String?
   payment_qr_code_id String?
-  device_type        String? // Mobile, Tablet, Desktop
+  device_type        String?
   ip_address         String?
-  scanned_at         DateTime @default(now())
-
-  menuQRCode    MenuQRCode?    @relation(fields: [menu_qr_code_id], references: [id])
-  paymentQRCode PaymentQRCode? @relation(fields: [payment_qr_code_id], references: [id])
+  scanned_at         DateTime       @default(now())
+  menuQRCode         MenuQRCode?    @relation(fields: [menu_qr_code_id], references: [id])
+  paymentQRCode      PaymentQRCode? @relation(fields: [payment_qr_code_id], references: [id])
 
   @@map("qr_scan_logs")
 }
 
-// ---------------------------------------------------------
-// SUBSCRIPTION & BILLING MODELS
-// ---------------------------------------------------------
-
 model SubscriptionPlan {
-  id               String   @id @default(uuid())
-  name             String   // Free, Starter, Professional, Enterprise, Lifetime
-  description      String?
-  billing_cycle    String   // MONTHLY, YEARLY, LIFETIME
-  price            Float
-  is_active        Boolean  @default(true)
-  max_branches     Int      @default(1)
-  max_users        Int      @default(5)
-  max_storage_mb   Int      @default(1024)
-  features         Json?    // Array of feature strings or JSON object
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-
-  subscriptions    Subscription[]
+  id             String         @id @default(uuid())
+  name           String
+  description    String?
+  billing_cycle  String
+  price          Float
+  is_active      Boolean        @default(true)
+  max_branches   Int            @default(1)
+  max_users      Int            @default(5)
+  max_storage_mb Int            @default(1024)
+  features       Json?
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  subscriptions  Subscription[]
 
   @@map("subscription_plans")
 }
 
 model Subscription {
-  id                   String   @id @default(uuid())
-  organization_id      String   @unique
-  plan_id              String
-  status               String   // ACTIVE, TRIAL, EXPIRED, SUSPENDED, CANCELLED, GRACE_PERIOD, PENDING_PAYMENT, LIFETIME
-  start_date           DateTime @default(now())
-  end_date             DateTime?
-  trial_end_date       DateTime?
-  grace_period_end     DateTime?
-  is_auto_renew        Boolean  @default(true)
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
-
-  organization         Organization        @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  plan                 SubscriptionPlan    @relation(fields: [plan_id], references: [id])
-  usage                SubscriptionUsage?
-  history              SubscriptionHistory[]
-  invoices             SubscriptionInvoice[]
+  id               String                @id @default(uuid())
+  organization_id  String                @unique
+  plan_id          String
+  status           String
+  start_date       DateTime              @default(now())
+  end_date         DateTime?
+  trial_end_date   DateTime?
+  grace_period_end DateTime?
+  is_auto_renew    Boolean               @default(true)
+  created_at       DateTime              @default(now())
+  updated_at       DateTime              @updatedAt
+  history          SubscriptionHistory[]
+  invoices         SubscriptionInvoice[]
+  usage            SubscriptionUsage?
+  organization     Organization          @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  plan             SubscriptionPlan      @relation(fields: [plan_id], references: [id])
 
   @@map("subscriptions")
 }
 
 model SubscriptionUsage {
-  id               String   @id @default(uuid())
-  subscription_id  String   @unique
-  branches_used    Int      @default(0)
-  users_used       Int      @default(0)
-  storage_used_mb  Float    @default(0)
-  orders_processed Int      @default(0)
-  api_requests     Int      @default(0)
-  last_updated     DateTime @default(now())
-
+  id               String       @id @default(uuid())
+  subscription_id  String       @unique
+  branches_used    Int          @default(0)
+  users_used       Int          @default(0)
+  storage_used_mb  Float        @default(0)
+  orders_processed Int          @default(0)
+  api_requests     Int          @default(0)
+  last_updated     DateTime     @default(now())
   subscription     Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
 
   @@map("subscription_usage")
 }
 
 model SubscriptionHistory {
-  id               String   @id @default(uuid())
-  subscription_id  String
-  event_type       String   // CREATED, RENEWED, UPGRADED, DOWNGRADED, CANCELLED, EXPIRED
-  old_plan_id      String?
-  new_plan_id      String?
-  notes            String?
-  created_at       DateTime @default(now())
-
-  subscription     Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+  id              String       @id @default(uuid())
+  subscription_id String
+  event_type      String
+  old_plan_id     String?
+  new_plan_id     String?
+  notes           String?
+  created_at      DateTime     @default(now())
+  subscription    Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
 
   @@map("subscription_history")
 }
 
 model SubscriptionInvoice {
-  id               String   @id @default(uuid())
-  subscription_id  String
-  invoice_number   String   @unique
-  amount           Float
-  currency         String   @default("USD")
-  status           String   // PAID, UNPAID, CANCELLED, REFUNDED
-  billing_cycle    String
-  pdf_url          String?
-  paid_at          DateTime?
-  due_date         DateTime?
-  created_at       DateTime @default(now())
-
-  subscription     Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
-  payments         SubscriptionPayment[]
+  id              String                @id @default(uuid())
+  subscription_id String
+  invoice_number  String                @unique
+  amount          Float
+  currency        String                @default("USD")
+  status          String
+  billing_cycle   String
+  pdf_url         String?
+  paid_at         DateTime?
+  due_date        DateTime?
+  created_at      DateTime              @default(now())
+  subscription    Subscription          @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+  payments        SubscriptionPayment[]
 
   @@map("subscription_invoices")
 }
 
 model SubscriptionPayment {
-  id                 String   @id @default(uuid())
-  invoice_id         String
-  payment_method     String   // CREDIT_CARD, DEBIT_CARD, BANK_TRANSFER, OFFLINE
-  amount             Float
-  transaction_ref    String?
-  status             String   // SUCCESS, PENDING, FAILED
-  payment_date       DateTime @default(now())
-
-  invoice            SubscriptionInvoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  id              String              @id @default(uuid())
+  invoice_id      String
+  payment_method  String
+  amount          Float
+  transaction_ref String?
+  status          String
+  payment_date    DateTime            @default(now())
+  invoice         SubscriptionInvoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
 
   @@map("subscription_payments")
+}
+
+model CustomerSubscriptionPlan {
+  id              String                 @id @default(uuid())
+  organization_id String
+  name            String
+  description     String?
+  price           Float
+  billing_cycle   String                 // "MONTHLY", "WEEKLY", "YEARLY"
+  features        Json?                  
+  created_at      DateTime               @default(now())
+  updated_at      DateTime               @updatedAt
+  subscriptions   CustomerSubscription[]
+
+  @@map("customer_subscription_plans")
+}
+
+model CustomerSubscription {
+  id              String                   @id @default(uuid())
+  customer_id     String
+  plan_id         String
+  status          String                   // "ACTIVE", "CANCELLED", "PAST_DUE"
+  start_date      DateTime                 @default(now())
+  next_billing    DateTime?
+  is_auto_renew   Boolean                  @default(true)
+  created_at      DateTime                 @default(now())
+  updated_at      DateTime                 @updatedAt
+  customer        Customer                 @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  plan            CustomerSubscriptionPlan @relation(fields: [plan_id], references: [id])
+
+  @@map("customer_subscriptions")
 }

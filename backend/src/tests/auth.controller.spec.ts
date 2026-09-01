@@ -22,10 +22,10 @@ import { login, refreshToken, getMe, changePassword } from '../controller/auth.c
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 const mockRole = { id: 'role-1', name: 'ADMIN' };
-const mockOrg  = { id: 'org-1',  name: 'HummyFly HQ' };
+const mockOrg  = { id: 'org-1',  name: 'Digital Hotel HQ' };
 const mockUser = {
   id:            'user-1',
-  email:         'admin@hummyfly.com',
+  email:         'admin@digital_hotel.com',
   username:      'admin',
   first_name:    'Admin',
   last_name:     'User',

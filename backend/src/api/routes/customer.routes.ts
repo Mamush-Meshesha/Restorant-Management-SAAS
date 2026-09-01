@@ -6,5 +6,6 @@ const router = Router();
 router.get('/me', extractInstituteData, controller.get_my_profile);
 router.post('/', extractInstituteData, controller.create_customer);
 router.get('/', extractInstituteData, controller.get_customers);
+router.put('/:id', extractInstituteData, controller.update_customer);
 
 export default router;

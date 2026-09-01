@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/institute.middleware';
 import { hashPassword } from '../lib/password';
+import { createAuditLog } from '../lib/auditTrail';
+import { SubscriptionService } from '../services/subscription.service';
 
 export const create_user = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -13,10 +15,31 @@ export const create_user = async (req: AuthenticatedRequest, res: Response, next
     const branch_id = isManager ? req.user?.branch_id : req.body.branch_id;
     const { role_id, username, email, password, first_name, last_name } = req.body;
 
+    // Enforce SaaS Subscription Limits
+    if (orgId && roleName !== 'SUPERADMIN') {
+      try {
+        await SubscriptionService.checkUserLimit(orgId);
+      } catch (err: any) {
+        return res.status(403).json({ message: err.message });
+      }
+    }
+
+    if (branch_id) {
+      const assignedBranch = await prisma.branch.findUnique({ where: { id: branch_id } });
+      if (!assignedBranch) return res.status(404).json({ message: "Branch not found" });
+      if (assignedBranch.organization_id !== orgId && roleName !== 'SUPERADMIN') {
+        return res.status(403).json({ message: "Forbidden: Branch belongs to a different organization" });
+      }
+    }
+
     // Security check: Hierarchy enforcement
     if (role_id) {
       const assignedRole = await prisma.role.findUnique({ where: { id: role_id } });
       if (!assignedRole) return res.status(404).json({ message: "Role not found" });
+
+      if (assignedRole.organization_id !== orgId && roleName !== 'SUPERADMIN') {
+        return res.status(403).json({ message: "Forbidden: Role belongs to a different organization" });
+      }
 
       if (roleName === 'COMPANY_ADMIN' && ['SUPERADMIN', 'COMPANY_ADMIN'].includes(assignedRole.name)) {
         return res.status(403).json({ message: `Forbidden: Cannot create user with ${assignedRole.name} role` });
@@ -46,6 +69,8 @@ export const create_user = async (req: AuthenticatedRequest, res: Response, next
       }
     });
 
+    await createAuditLog({ entity_type: 'USER', entity_id: user.id, action: 'CREATE', user_id: req.user?.id, organization_id: orgId!, ip_address: req.ip, details: { username: user.username, role_id } });
+
     res.status(201).json({ message: "User created", data: { id: user.id, username: user.username } });
   } catch (error) { next(error); }
 };
@@ -57,11 +82,7 @@ export const get_users = async (req: AuthenticatedRequest, res: Response, next: 
     const isSuperAdmin = roleName === 'SUPERADMIN';
     const isManager = roleName === 'BRANCH_MANAGER';
     
-    const whereClause: any = {};
-    
-    if (!isSuperAdmin) {
-      whereClause.organization_id = orgId;
-    }
+    const whereClause: any = { organization_id: orgId };
     
     if (isManager && req.user?.branch_id) {
       whereClause.branch_id = req.user.branch_id;
@@ -105,7 +126,15 @@ export const update_user = async (req: AuthenticatedRequest, res: Response, next
     const orgId = req.user?.organizationId || req.user?.instituteId;
     const roleName = req.user?.role_name;
     const { id } = req.params;
-    const { role_id, branch_id, first_name, last_name, is_active } = req.body;
+    const { role_id, branch_id, first_name, last_name, is_active, password } = req.body;
+
+    if (branch_id && roleName !== 'BRANCH_MANAGER') {
+      const assignedBranch = await prisma.branch.findUnique({ where: { id: branch_id } });
+      if (!assignedBranch) return res.status(404).json({ message: "Branch not found" });
+      if (assignedBranch.organization_id !== orgId && roleName !== 'SUPERADMIN') {
+        return res.status(403).json({ message: "Forbidden: Branch belongs to a different organization" });
+      }
+    }
 
     // Build query based on privileges
     const whereClause: any = { id };
@@ -140,6 +169,10 @@ export const update_user = async (req: AuthenticatedRequest, res: Response, next
       const assignedRole = await prisma.role.findUnique({ where: { id: role_id } });
       if (!assignedRole) return res.status(404).json({ message: "Role not found" });
 
+      if (assignedRole.organization_id !== orgId && roleName !== 'SUPERADMIN') {
+        return res.status(403).json({ message: "Forbidden: Role belongs to a different organization" });
+      }
+
       if (roleName === 'COMPANY_ADMIN' && ['SUPERADMIN', 'COMPANY_ADMIN'].includes(assignedRole.name)) {
         return res.status(403).json({ message: `Forbidden: Cannot assign ${assignedRole.name} role` });
       }
@@ -151,18 +184,59 @@ export const update_user = async (req: AuthenticatedRequest, res: Response, next
       }
     }
 
+    const updateData: any = {
+      role_id,
+      branch_id: roleName === 'BRANCH_MANAGER' ? undefined : branch_id, // Branch Managers can't change branches
+      first_name,
+      last_name,
+      is_active
+    };
+
+    if (password) {
+      updateData.password_hash = await hashPassword(password);
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: {
-        role_id,
-        branch_id: roleName === 'BRANCH_MANAGER' ? undefined : branch_id, // Branch Managers can't change branches
-        first_name,
-        last_name,
-        is_active
-      }
+      data: updateData
     });
+
+    await createAuditLog({ entity_type: 'USER', entity_id: updatedUser.id, action: 'UPDATE', user_id: req.user?.id, organization_id: orgId!, ip_address: req.ip, details: { role_id, is_active } });
 
     const { password_hash, ...sanitizedUser } = updatedUser;
     res.status(200).json({ message: "User updated successfully", data: sanitizedUser });
+  } catch (error) { next(error); }
+};
+
+export const toggle2fa = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { is_2fa_enabled: !user.is_2fa_enabled }
+    });
+
+    await createAuditLog({ 
+      entity_type: 'USER', 
+      entity_id: user.id, 
+      action: updatedUser.is_2fa_enabled ? 'ENABLE_2FA' : 'DISABLE_2FA', 
+      user_id: user.id, 
+      organization_id: user.organization_id, 
+      ip_address: req.ip 
+    });
+
+    res.status(200).json({ 
+      message: `2FA has been ${updatedUser.is_2fa_enabled ? 'enabled' : 'disabled'}`, 
+      is_2fa_enabled: updatedUser.is_2fa_enabled 
+    });
   } catch (error) { next(error); }
 };

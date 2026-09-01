@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.hummyfly.customer"
+    namespace "com.digitalhotel.customer"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.hummyfly.customer"
+        applicationId "com.digitalhotel.customer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -1,19 +1,19 @@
-import { useState } from "react";
+
 import {
   Box, Card, CardContent, Typography, Stack, Divider,
-  Switch, FormControlLabel, Button, Grid, Paper, Chip, alpha,
+  Switch, FormControlLabel, Grid, Paper, Chip, alpha,
   ToggleButtonGroup, ToggleButton, Tooltip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
-  IconMoon, IconSun, IconPalette, IconBell,
+  IconMoon, IconSun, IconPalette,
   IconDeviceDesktop, IconCheck, IconLayout,
 } from "@tabler/icons-react";
 import { useAppDispatch, useAppSelector } from "@/hooks/auth";
 import {
   toggleThemeMode, setPrimaryColor, setFontSize, setSidebarCompact,
 } from "@/redux/slices/themeSlice";
-import { toast } from "react-toastify";
+
 
 const COLOR_OPTIONS = [
   { key: "espresso", label: "Espresso", main: "#2B2118", accent: "#D4A017" },
@@ -32,13 +32,7 @@ const AppSettingsPage = () => {
   const sidebarCompact = themeState?.sidebarCompact ?? false;
   const primaryColor = themeState?.primaryColor ?? "espresso";
 
-  const [notifs, setNotifs] = useState({
-    orders: true,
-    kitchen: true,
-    inventory: false,
-    email: false,
-    browser: true,
-  });
+
 
   const SectionCard = ({ title, description, icon: Icon, children }: any) => (
     <Card
@@ -199,48 +193,7 @@ const AppSettingsPage = () => {
         />
       </SectionCard>
 
-      {/* ── NOTIFICATIONS ─────────────────────────────────── */}
-      <SectionCard title="Notifications" description="Choose which events trigger notifications." icon={IconBell}>
-        <Stack spacing={2}>
-          {[
-            { key: "orders", label: "New Orders", desc: "Get notified when a new order is placed" },
-            { key: "kitchen", label: "Kitchen Alerts", desc: "Alerts when orders are ready or delayed" },
-            { key: "inventory", label: "Inventory Warnings", desc: "Low-stock and reorder notifications" },
-            { key: "browser", label: "Browser Push Notifications", desc: "Show desktop notifications" },
-            { key: "email", label: "Email Digest", desc: "Daily summary sent to your email" },
-          ].map((item) => (
-            <Box key={item.key}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={notifs[item.key as keyof typeof notifs]}
-                    onChange={(e) => setNotifs((p) => ({ ...p, [item.key]: e.target.checked }))}
-                    color="primary"
-                    size="small"
-                  />
-                }
-                label={
-                  <Box sx={{ ml: 0.5 }}>
-                    <Typography variant="subtitle2" fontWeight={600}>{item.label}</Typography>
-                    <Typography variant="caption" color="text.secondary">{item.desc}</Typography>
-                  </Box>
-                }
-                sx={{ mx: 0, alignItems: "center" }}
-              />
-              <Divider sx={{ mt: 1.5 }} />
-            </Box>
-          ))}
-        </Stack>
 
-        <Button
-          variant="contained"
-          startIcon={<IconCheck size={16} />}
-          onClick={() => toast.success("Notification preferences saved!")}
-          sx={{ mt: 2 }}
-        >
-          Save Preferences
-        </Button>
-      </SectionCard>
 
       {/* ── SYSTEM INFO ───────────────────────────────────── */}
       <SectionCard title="System" description="Information about this installation." icon={IconDeviceDesktop}>

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/institute.middleware';
+import { io } from '../socket';
 
 export const create_order = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -12,6 +13,30 @@ export const create_order = async (req: AuthenticatedRequest, res: Response, nex
     }
     const { table_id, order_type, items } = req.body; // items: [{ menu_item_id, quantity, notes }]
     
+    // --- Table Availability Check ---
+    if (table_id && (!order_type || order_type === 'DINE_IN')) {
+      const table = await prisma.table.findUnique({ where: { id: table_id } });
+      // Table is occupied by this session, so we can allow the order.
+      // (Removed the block that prevented occupied tables from ordering)
+
+      // Check if there is an upcoming reservation within the next 2 hours
+      const now = new Date();
+      const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+      const upcomingReservation = await prisma.reservation.findFirst({
+        where: {
+          table_id,
+          status: { notIn: ['CANCELLED', 'SEATED'] },
+          reservation_time: { gte: now, lte: twoHoursFromNow }
+        }
+      });
+
+      if (upcomingReservation) {
+        return res.status(400).json({ 
+          message: `Cannot seat a walk-in. Table is reserved for ${upcomingReservation.customer_name} at ${upcomingReservation.reservation_time.toLocaleTimeString()}.`
+        });
+      }
+    }
+
     // Calculate totals
     let subtotal = 0;
     const orderItemsData = [];
@@ -78,6 +103,13 @@ export const create_order = async (req: AuthenticatedRequest, res: Response, nex
       await prisma.kitchenOrder.createMany({ data: kitchenOrdersData });
     }
 
+    if (table_id && (!order_type || order_type === 'DINE_IN')) {
+      await prisma.table.update({
+        where: { id: table_id },
+        data: { status: 'OCCUPIED' }
+      });
+    }
+
     // --- Notify Staff ---
     const staff = await prisma.user.findMany({
       where: { branch_id: branchId }
@@ -94,6 +126,11 @@ export const create_order = async (req: AuthenticatedRequest, res: Response, nex
         organization_id: orgId
       }));
       await prisma.notification.createMany({ data: notifs });
+    }
+
+    if (branchId) {
+      io.to(`branch_${branchId}`).emit("order_update", { type: "CREATE", order });
+      io.to(`branch_${branchId}`).emit("kitchen_update");
     }
 
     res.status(201).json({ message: "Order created successfully", data: order });
@@ -139,7 +176,12 @@ export const get_orders = async (req: AuthenticatedRequest, res: Response, next:
         table: true,
         items: {
           include: { menuItem: true }
-        }
+        },
+        bills: {
+          include: {
+            transactions: true
+          }
+        },
       },
       orderBy: { created_at: 'desc' },
       take: limit,
@@ -157,10 +199,27 @@ export const update_order_status = async (req: AuthenticatedRequest, res: Respon
     // Get the order first to check if there is a customer attached
     const existingOrder = await prisma.order.findUnique({ where: { id } });
     
+    if (!existingOrder) return res.status(404).json({ message: 'Order not found' });
+
+    if (status === 'CLOSED' && existingOrder.status !== 'CLOSED') {
+      return res.status(400).json({ message: 'Cannot manually transition to CLOSED without payment. Use Checkout.' });
+    }
+
     const order = await prisma.order.update({
       where: { id },
       data: { status }
     });
+
+    if (status === 'CLOSED' && order.table_id) {
+      await prisma.table.update({
+        where: { id: order.table_id },
+        data: { status: 'AVAILABLE' }
+      });
+    }
+
+    if (order.branch_id) {
+      io.to(`branch_${order.branch_id}`).emit("order_update", { type: "UPDATE", order });
+    }
 
     // Create a notification for the customer if one exists
     if (existingOrder && existingOrder.customer_id && existingOrder.status !== status) {
@@ -197,10 +256,137 @@ export const update_order_status = async (req: AuthenticatedRequest, res: Respon
 export const cancel_order = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    
+    // We should check all items in this order. If they were cooked, log them to WasteLog.
+    const orderItems = await prisma.orderItem.findMany({
+      where: { order_id: id },
+      include: {
+        kitchenOrders: true,
+        menuItem: true,
+        order: true
+      }
+    });
+
+    const wasteLogs = [];
+    for (const item of orderItems) {
+      const isCooked = item.kitchenOrders.some(ko => ko.status === 'READY');
+      if (isCooked) {
+        wasteLogs.push({
+          branch_id: item.order.branch_id,
+          item_name: item.menuItem.name,
+          quantity: item.quantity,
+          cost_loss: item.unit_price * item.quantity,
+          reason: 'ORDER_CANCELLED'
+        });
+      }
+    }
+
+    if (wasteLogs.length > 0) {
+      await prisma.wasteLog.createMany({ data: wasteLogs });
+    }
+
     const order = await prisma.order.update({
       where: { id },
       data: { status: 'CANCELLED' }
     });
+    
+    if (order.table_id) {
+      await prisma.table.update({
+        where: { id: order.table_id },
+        data: { status: 'AVAILABLE' }
+      });
+    }
+
+    if (order.branch_id) {
+      io.to(`branch_${order.branch_id}`).emit("order_update", { type: "CANCEL", order });
+    }
+    
     res.status(200).json({ message: 'Order cancelled', data: order });
+  } catch (error) { next(error); }
+};
+
+export const void_order_item = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params; // OrderItem ID
+    const { reason, wasted } = req.body;
+    const roleName = req.user?.role_name;
+
+    if (!req.user || !['SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'].includes(roleName || '')) {
+      return res.status(403).json({ message: 'Forbidden: Only managers can void items' });
+    }
+
+    const orderItem = await prisma.orderItem.findUnique({
+      where: { id },
+      include: { order: true }
+    });
+
+    if (!orderItem) return res.status(404).json({ message: 'OrderItem not found' });
+
+    // Ensure the order item is not already paid or fully locked
+    if (orderItem.order.status === 'COMPLETED') {
+      return res.status(400).json({ message: 'Cannot void items on a completed order' });
+    }
+
+    // Check if it's already cooked.
+    const kitchenOrders = await prisma.kitchenOrder.findMany({ where: { order_item_id: orderItem.id } });
+    const isCooked = kitchenOrders.some(ko => ko.status === 'READY');
+    
+    // Create the void log
+    await prisma.voidLog.create({
+      data: {
+        order_item_id: orderItem.id,
+        voided_by_id: req.user.id,
+        reason,
+        wasted: wasted || false
+      }
+    });
+
+    // If wasted and cooked, log to WasteLog
+    if (wasted && isCooked) {
+      const menuItem = await prisma.menuItem.findUnique({ where: { id: orderItem.menu_item_id } });
+      if (menuItem) {
+        await prisma.wasteLog.create({
+          data: {
+            branch_id: orderItem.order.branch_id,
+            item_name: menuItem.name,
+            quantity: orderItem.quantity,
+            cost_loss: orderItem.unit_price * orderItem.quantity,
+            reason: `VOIDED: ${reason}`
+          }
+        });
+      }
+    }
+
+    // We can either set the unit_price to 0 or remove it from the subtotal.
+    // The most robust way is to mark the OrderItem status as VOIDED if there was a status, 
+    // or just set its total_price to 0 and recalculate the order subtotal.
+    const updatedItem = await prisma.orderItem.update({
+      where: { id },
+      data: {
+        total_price: 0,
+        unit_price: 0,
+        notes: `VOIDED: ${reason}`
+      }
+    });
+
+    // Recalculate order total
+    const orderItems = await prisma.orderItem.findMany({
+      where: { order_id: orderItem.order_id }
+    });
+    const newSubtotal = orderItems.reduce((acc, item) => acc + item.total_price, 0);
+
+    await prisma.order.update({
+      where: { id: orderItem.order_id },
+      data: {
+        subtotal: newSubtotal,
+        total_amount: newSubtotal // simplified for now
+      }
+    });
+
+    if (orderItem.order.branch_id) {
+      io.to(`branch_${orderItem.order.branch_id}`).emit("order_update", { type: "VOID", orderId: orderItem.order_id });
+    }
+
+    res.status(200).json({ message: 'Order item voided securely', data: updatedItem });
   } catch (error) { next(error); }
 };

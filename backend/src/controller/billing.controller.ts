@@ -133,6 +133,36 @@ export const upgrade_subscription = async (req: AuthenticatedRequest, res: Respo
   } catch (error) { next(error); }
 };
 
+// ─── CANCEL SUBSCRIPTION ──────────────────────────────────────────────────────
+export const cancel_subscription = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const orgId = req.user?.organization_id;
+    if (!orgId) return res.status(400).json({ message: "Organization ID missing" });
+
+    let subscription = await prisma.subscription.findUnique({ where: { organization_id: orgId } });
+    if (!subscription) return res.status(404).json({ message: "No active subscription found" });
+
+    subscription = await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        status: "CANCELED",
+        is_auto_renew: false
+      }
+    });
+
+    await prisma.subscriptionHistory.create({
+      data: {
+        subscription_id: subscription.id,
+        event_type: "CANCELED",
+        old_plan_id: subscription.plan_id,
+        notes: "Subscription canceled by user"
+      }
+    });
+
+    res.status(200).json({ message: "Subscription canceled successfully", data: subscription });
+  } catch (error) { next(error); }
+};
+
 // ─── GET BILLING HISTORY ──────────────────────────────────────────────────────
 export const get_billing_history = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {

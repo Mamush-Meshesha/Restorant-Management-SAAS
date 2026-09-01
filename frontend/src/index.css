@@ -164,3 +164,24 @@ body.scanner-active .scanner-ui-overlay,
 body.scanner-active .scanner-ui-overlay .MuiBox-root {
   background-color: rgba(0, 0, 0, 0.6) !important;
 }
+
+/* Global Smooth Scrolling and Premium Scrollbars */
+html, body {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(144, 144, 144, 0.3);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(144, 144, 144, 0.5);
+}

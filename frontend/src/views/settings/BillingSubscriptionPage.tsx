@@ -9,7 +9,8 @@ import {
   IconChartPie, IconDownload, IconReceipt, IconCheck
 } from "@tabler/icons-react";
 import PageContainer from "../../components/container/PageContainer";
-import { getBillingSubscription, getBillingPlans, getBillingInvoices, upgradeSubscription, downloadInvoice } from "../../api/_billing";
+import { getBillingSubscription, getBillingPlans, getBillingInvoices, upgradeSubscription, cancelSubscription, downloadInvoice } from "../../api/_billing";
+import { toast } from "react-toastify";
 
 // ─── TYPES ──────────────────────────────────────────────────────────────────
 interface SubscriptionPlan {
@@ -49,9 +50,13 @@ interface Invoice {
   pdf_url?: string;
 }
 
+import { useDispatch } from "react-redux";
+import { setSubscription as setGlobalSubscription } from "../../redux/slices/authSlice";
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function BillingSubscriptionPage() {
   const theme = useTheme();
+  const dispatch = useDispatch();
   
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -60,27 +65,30 @@ export default function BillingSubscriptionPage() {
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
 
+  const [errorStr, setErrorStr] = useState<string | null>(null);
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
     setLoading(true);
+    setErrorStr(null);
     try {
       const [subRes, plansRes, invRes] = await Promise.all([
-        getBillingSubscription().catch(() => ({ data: { data: null } })),
-        getBillingPlans().catch(() => ({ data: { data: [] } })),
-        getBillingInvoices().catch(() => ({ data: { data: [] } }))
+        getBillingSubscription(),
+        getBillingPlans(),
+        getBillingInvoices()
       ]);
 
-      setSubscription(subRes.data.data || MOCK_SUB);
-      setPlans(plansRes.data.data?.length ? plansRes.data.data : MOCK_PLANS);
-      setInvoices(invRes.data.data?.length ? invRes.data.data : MOCK_INVOICES);
-    } catch (err) {
+      setSubscription(subRes.data.data);
+      dispatch(setGlobalSubscription(subRes.data.data));
+      setPlans(plansRes.data.data);
+      setInvoices(invRes.data.data);
+    } catch (err: any) {
       console.error(err);
-      setSubscription(MOCK_SUB);
-      setPlans(MOCK_PLANS);
-      setInvoices(MOCK_INVOICES);
+      setErrorStr(err.message || JSON.stringify(err));
+      toast.error("Failed to load billing details");
     } finally {
       setLoading(false);
     }
@@ -91,18 +99,29 @@ export default function BillingSubscriptionPage() {
     try {
       await upgradeSubscription(selectedPlan.id, selectedPlan.billing_cycle);
       setUpgradeDialogOpen(false);
+      toast.success("Subscription upgraded successfully!");
       fetchData();
-    } catch (err) {
-      alert("Upgrade failed. Please try again.");
+    } catch (err: any) {
+      toast.error("Upgrade failed: " + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleCancel = async () => {
+    if (window.confirm("Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing cycle.")) {
+      try {
+        await cancelSubscription();
+        toast.success("Subscription canceled");
+        fetchData();
+      } catch (err: any) {
+        toast.error("Failed to cancel subscription: " + (err.response?.data?.message || err.message));
+      }
     }
   };
 
   const handleDownloadInvoice = async (invoice: Invoice) => {
     if (invoice.pdf_url) {
-      // Direct URL download
       window.open(`http://localhost:3000${invoice.pdf_url}`, "_blank");
     } else {
-      // Generate on the fly
       try {
         const res = await downloadInvoice(invoice.id);
         const blob = new Blob([res.data], { type: "application/pdf" });
@@ -118,12 +137,16 @@ export default function BillingSubscriptionPage() {
     }
   };
 
-  if (loading || !subscription) return <Typography p={4}>Loading billing details...</Typography>;
-
-  const { plan, usage, status, end_date } = subscription;
-  const daysRemaining = end_date ? Math.ceil((new Date(end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 365;
+  if (loading) return <Typography p={4}>Loading billing details...</Typography>;
+  if (errorStr) return <Typography p={4} color="error">Error loading details: {errorStr}</Typography>;
+  const plan = subscription?.plan || { name: "No Active Plan", description: "You currently do not have an active subscription.", max_branches: 0, max_users: 0, max_storage_mb: 0 };
+  const usage = subscription?.usage || { branches_used: 0, users_used: 0, storage_used_mb: 0 };
+  const status = subscription?.status || 'NONE';
+  const end_date = subscription?.end_date;
+  
+  const daysRemaining = end_date ? Math.ceil((new Date(end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
   const totalDays = 365;
-  const progressPercent = Math.max(0, Math.min(100, (daysRemaining / totalDays) * 100));
+  const progressPercent = subscription ? Math.max(0, Math.min(100, (daysRemaining / totalDays) * 100)) : 0;
 
   return (
     <PageContainer title="Billing & Subscription" description="Manage your enterprise subscription">
@@ -169,11 +192,13 @@ export default function BillingSubscriptionPage() {
 
               <Stack direction="row" spacing={2} mt={4}>
                 <Button variant="contained" size="large" onClick={() => document.getElementById('plans-section')?.scrollIntoView({ behavior: 'smooth' })}>
-                  Change Plan
+                  {subscription ? 'Change Plan' : 'View Plans'}
                 </Button>
-                <Button variant="outlined" size="large" color="error">
-                  Cancel Subscription
-                </Button>
+                {subscription && status !== 'CANCELED' && (
+                  <Button variant="outlined" size="large" color="error" onClick={handleCancel}>
+                    Cancel Subscription
+                  </Button>
+                )}
               </Stack>
             </CardContent>
           </Card>
@@ -207,15 +232,15 @@ export default function BillingSubscriptionPage() {
           <Typography variant="h5" fontWeight={800} mb={3}>Available Plans</Typography>
           <Grid container spacing={3}>
             {plans.map((p) => (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={p.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={(p as any).id}>
                 <Card 
                   sx={{ 
                     height: "100%", 
-                    border: p.id === plan.id ? `2px solid ${theme.palette.primary.main}` : undefined,
+                    border: (p as any).id === (plan as any).id ? `2px solid ${theme.palette.primary.main}` : undefined,
                     position: "relative"
                   }}
                 >
-                  {p.id === plan.id && (
+                  {(p as any).id === (plan as any).id && (
                     <Box sx={{ position: "absolute", top: 12, right: 12 }}>
                       <Chip label="CURRENT" size="small" color="primary" />
                     </Box>
@@ -235,12 +260,12 @@ export default function BillingSubscriptionPage() {
                     </Box>
 
                     <Button 
-                      variant={p.id === plan.id ? "outlined" : "contained"} 
+                      variant={(p as any).id === (plan as any).id ? "outlined" : "contained"} 
                       fullWidth 
-                      disabled={p.id === plan.id}
+                      disabled={(p as any).id === (plan as any).id}
                       onClick={() => { setSelectedPlan(p); setUpgradeDialogOpen(true); }}
                     >
-                      {p.id === plan.id ? "Current Plan" : "Upgrade"}
+                      {(p as any).id === (plan as any).id ? "Current Plan" : "Upgrade"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -345,22 +370,3 @@ function UsageBar({ label, used, max }: { label: string; used: number; max: numb
     </Box>
   );
 }
-
-// ─── MOCK DATA FALLBACKS ─────────────────────────────────────────────────────
-const MOCK_SUB: any = {
-  id: "sub_1",
-  status: "ACTIVE",
-  end_date: "2026-12-31T00:00:00Z",
-  plan: { id: "p1", name: "Professional Plan", description: "Comprehensive tools for multi-branch operations.", max_branches: 5, max_users: 50, max_storage_mb: 20000 },
-  usage: { branches_used: 2, users_used: 15, storage_used_mb: 4500 }
-};
-
-const MOCK_PLANS: any[] = [
-  { id: "p1", name: "Starter", price: 49.99, billing_cycle: "MONTHLY", features: ["1 Branch", "5 Users"] },
-  { id: "p2", name: "Professional", price: 99.99, billing_cycle: "MONTHLY", features: ["5 Branches", "50 Users", "API Access"] },
-  { id: "p3", name: "Enterprise", price: 999.99, billing_cycle: "YEARLY", features: ["Unlimited", "Custom Features"] }
-];
-
-const MOCK_INVOICES: any[] = [
-  { id: "inv_1", invoice_number: "INV-2025-001", amount: 99.99, status: "PAID", created_at: "2025-11-01T10:00:00Z" }
-];

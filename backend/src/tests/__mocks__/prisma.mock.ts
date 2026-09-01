@@ -51,6 +51,7 @@ const mockPrismaClient: any = {
     create:     jest.fn(),
     update:     jest.fn(),
     aggregate:  jest.fn(),
+    upsert:     jest.fn(),
   },
   subscription: {
     findUnique: jest.fn(),
@@ -81,6 +82,7 @@ const mockPrismaClient: any = {
   },
   customer: {
     findMany:   jest.fn(),
+    findFirst:  jest.fn(),
     findUnique: jest.fn(),
     create:     jest.fn(),
     update:     jest.fn(),
@@ -135,9 +137,13 @@ const mockPrismaClient: any = {
     findMany:   jest.fn(),
     createMany: jest.fn(),
     update:     jest.fn(),
+    upsert:     jest.fn(),
   },
   orderItem: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
     update:     jest.fn(),
+    upsert:     jest.fn(),
   },
   inventoryItem: {
     findMany:   jest.fn(),
@@ -146,11 +152,15 @@ const mockPrismaClient: any = {
     update:     jest.fn(),
     delete:     jest.fn(),
   },
+  stockMovement: {
+    create: jest.fn(),
+  },
   stockAdjustment: {
     create: jest.fn(),
   },
   wasteLog: {
     create: jest.fn(),
+    createMany: jest.fn(),
   },
   recipe: {
     findMany:   jest.fn(),
@@ -185,6 +195,24 @@ const mockPrismaClient: any = {
   },
   transaction: {
     create: jest.fn(),
+    aggregate: jest.fn(),
+    upsert: jest.fn(),
+  },
+  cashDrawerSession: {
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  voidLog: {
+    create: jest.fn(),
+  },
+  waitlist: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    count: jest.fn(),
   },
   fiscalYear: {
     findFirst:  jest.fn(),
@@ -198,6 +226,14 @@ const mockPrismaClient: any = {
     createMany: jest.fn(),
     update:     jest.fn(),
     delete:     jest.fn(),
+  },
+  revokedToken: {
+    findUnique: jest.fn(),
+    create:     jest.fn(),
+  },
+  permission: {
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
   },
   $connect:    jest.fn().mockResolvedValue(undefined),
   $disconnect: jest.fn().mockResolvedValue(undefined),

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box, Card, CardContent, Typography, Stack, useTheme,
   TextField, InputAdornment, Button, IconButton, alpha, Chip, Menu, MenuItem,
@@ -8,12 +8,14 @@ import { DataGrid } from "@mui/x-data-grid";
 import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import {
   IconSearch, IconFilter, IconPlus, IconDownload, IconDots,
-  IconEdit, IconTrash, IconX, IconRefresh, IconEye
+  IconEdit, IconTrash, IconX, IconRefresh, IconEye, IconFileTypePdf, IconFileSpreadsheet
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import PageContainer from "../../components/container/PageContainer";
 import { toast } from "react-toastify";
 import ImageUpload from "../../components/widgets/ImageUpload";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // --- Props & Data Fetching Config ---
 export interface DataTableConfig {
@@ -86,15 +88,24 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
   // Row Action Menu State
   const [menuAnchor, setMenuAnchor] = useState<{ el: HTMLElement | null; row: any | null }>({ el: null, row: null });
 
+  // Export Menu State
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
+
+  const configRef = useRef(config);
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
+
   const fetchData = useCallback(async () => {
-    if (!config.fetchFn) return;
+    const currentConfig = configRef.current;
+    if (!currentConfig.fetchFn) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await config.fetchFn();
+      const res = await currentConfig.fetchFn();
       const raw = res.data;
-      const rows = config.transformFn
-        ? config.transformFn(raw)
+      const rows = currentConfig.transformFn
+        ? currentConfig.transformFn(raw)
         : (raw.data ?? raw);
       setData(Array.isArray(rows) ? rows : []);
     } catch (err: any) {
@@ -104,7 +115,7 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
     } finally {
       setLoading(false);
     }
-  }, [config]);
+  }, []); // stable identity
 
   useEffect(() => {
     fetchData();
@@ -214,15 +225,67 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
     handleCloseMenu();
   };
 
+  const handleExportCSV = () => {
+    const headers = config.columns.filter(c => c.field !== 'actions').map(c => c.headerName || c.field);
+    const rows = filteredData.map(row => 
+      config.columns.filter(c => c.field !== 'actions').map(c => {
+         const val = row[c.field];
+         const strVal = (val === null || val === undefined || val === '') ? '-' : String(val);
+         return `"${strVal.replace(/"/g, '""')}"`;
+      }).join(",")
+    );
+    const csvContent = headers.join(",") + "\n" + rows.join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${config.noun.toLowerCase().replace(/\s+/g, '_')}_export.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setExportMenuAnchor(null);
+    toast.success("CSV Export successful!");
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.text(`${config.title} Report`, 14, 15);
+    const headers = config.columns.filter(c => c.field !== 'actions').map(c => c.headerName || c.field);
+    const rows = filteredData.map(row => 
+      config.columns.filter(c => c.field !== 'actions').map(c => {
+         const val = row[c.field];
+         if (val === null || val === undefined || val === '') return '-';
+         return String(val);
+      })
+    );
+    if (rows.length === 0) {
+      doc.setFontSize(11);
+      doc.text("No data found.", 14, 30);
+    } else {
+      autoTable(doc, {
+        head: [headers],
+        body: rows,
+        startY: 20,
+      });
+    }
+    doc.save(`${config.noun.toLowerCase().replace(/\s+/g, '_')}_export.pdf`);
+    setExportMenuAnchor(null);
+    toast.success("PDF Export successful!");
+  };
+
   // Inject action column with local state
   const columnsWithActions = config.columns.map((col) => {
     if (col.field === "actions") {
       return {
         ...col,
         renderCell: (params: GridRenderCellParams) => (
-          <IconButton size="small" onClick={(e) => handleOpenMenu(e, params.row)}>
-            <IconDots size={16} />
-          </IconButton>
+          <Box display="flex" alignItems="center" height="100%">
+            <IconButton size="small" onClick={(e) => handleOpenMenu(e, params.row)}>
+              <IconDots size={16} />
+            </IconButton>
+          </Box>
         ),
       };
     }
@@ -267,6 +330,7 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
             <Button
               variant="outlined"
               startIcon={<IconDownload size={18} />}
+              onClick={(e) => setExportMenuAnchor(e.currentTarget)}
               sx={{
                 borderColor: theme.palette.divider,
                 color: "text.primary",
@@ -276,6 +340,19 @@ export default function DataTablePage({ config }: { config: DataTableConfig }) {
             >
               Export
             </Button>
+            <Menu
+              anchorEl={exportMenuAnchor}
+              open={Boolean(exportMenuAnchor)}
+              onClose={() => setExportMenuAnchor(null)}
+              PaperProps={{ sx: { mt: 1, minWidth: 140, boxShadow: theme.shadows[4] } }}
+            >
+              <MenuItem onClick={handleExportCSV}>
+                <IconFileSpreadsheet size={18} style={{ marginRight: 8 }} /> CSV
+              </MenuItem>
+              <MenuItem onClick={handleExportPDF}>
+                <IconFileTypePdf size={18} style={{ marginRight: 8 }} /> PDF
+              </MenuItem>
+            </Menu>
             {config.createFn && (
               <Button
                 variant="contained"

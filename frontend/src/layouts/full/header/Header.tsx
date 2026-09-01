@@ -210,7 +210,7 @@ const Header = ({
               >
                 <img
                   src={
-                    "https://cdn-icons-png.flaticon.com/512/3448/3448054.png"
+                    currentUser?.organization?.logo || "https://cdn-icons-png.flaticon.com/512/1046/1046857.png"
                   }
                   alt="restaurant-logo"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -233,15 +233,9 @@ const Header = ({
                   whiteSpace: "nowrap",
                   maxWidth: "100%",
                 }}
-                title={
-                  currentUser?.organization?.name === "Default Institute"
-                    ? "Main Branch"
-                    : currentUser?.organization?.name || "Restaurant Management Platform"
-                }
+                title={currentUser?.organization?.name || "Digital Hotel HQ"}
               >
-                {currentUser?.organization?.name === "Default Institute"
-                  ? "Main Branch"
-                  : currentUser?.organization?.name || "Restaurant Management Platform"}
+                {currentUser?.organization?.name || "Digital Hotel HQ"}
               </Typography>
 
               <Breadcrumbs

@@ -9,6 +9,7 @@ router.put('/areas/:id', extractInstituteData, controller.update_dining_area);
 router.delete('/areas/:id', extractInstituteData, controller.delete_dining_area);
 router.post('/', extractInstituteData, controller.create_table);
 router.get('/', extractInstituteData, controller.get_tables);
+router.put('/batch-update', extractInstituteData, controller.batch_update_tables);
 router.put('/:id', extractInstituteData, controller.update_table);
 router.delete('/:id', extractInstituteData, controller.delete_table);
 router.put('/:id/status', extractInstituteData, controller.update_table_status);

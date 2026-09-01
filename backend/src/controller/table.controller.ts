@@ -19,7 +19,12 @@ export const get_dining_areas = async (req: AuthenticatedRequest, res: Response,
     const { branchId } = req.query;
     
     const whereClause: any = { is_active: true };
-    if (branchId) whereClause.branch_id = String(branchId);
+    
+    if (branchId) {
+      whereClause.branch_id = String(branchId);
+    } else if (req.user?.branch_id) {
+      whereClause.branch_id = req.user.branch_id;
+    }
 
     const areas = await prisma.diningArea.findMany({
       where: whereClause,
@@ -52,7 +57,7 @@ export const delete_dining_area = async (req: AuthenticatedRequest, res: Respons
 
 export const create_table = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { branch_id, dining_area_id, name, capacity, x_pos, y_pos } = req.body;
+    const { branch_id, dining_area_id, name, capacity, x_pos, y_pos, rotation, scale_x, scale_y } = req.body;
 
     const table = await prisma.table.create({
       data: {
@@ -61,7 +66,10 @@ export const create_table = async (req: AuthenticatedRequest, res: Response, nex
         name,
         capacity: capacity || 2,
         x_pos,
-        y_pos
+        y_pos,
+        rotation,
+        scale_x,
+        scale_y
       }
     });
 
@@ -71,11 +79,18 @@ export const create_table = async (req: AuthenticatedRequest, res: Response, nex
 
 export const get_tables = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { branchId, status } = req.query;
+    const { branchId, status, areaId } = req.query;
 
     const whereClause: any = {};
-    if (branchId) whereClause.branch_id = String(branchId);
+    
+    if (branchId) {
+      whereClause.branch_id = String(branchId);
+    } else if (req.user?.branch_id) {
+      whereClause.branch_id = req.user.branch_id;
+    }
+    
     if (status) whereClause.status = String(status);
+    if (areaId) whereClause.dining_area_id = String(areaId);
 
     const tables = await prisma.table.findMany({
       where: whereClause,
@@ -122,5 +137,34 @@ export const update_table_status = async (req: AuthenticatedRequest, res: Respon
       data: { status }
     });
     res.status(200).json({ message: "Status updated", data: table });
+  } catch (error) { next(error); }
+};
+
+export const batch_update_tables = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { tables } = req.body;
+    if (!Array.isArray(tables)) {
+      return res.status(400).json({ error: "tables array is required" });
+    }
+
+    // Use a transaction to update all tables efficiently
+    await prisma.$transaction(
+      tables.map((t: any) =>
+        prisma.table.update({
+          where: { id: t.id },
+          data: {
+            x_pos: typeof t.x_pos === 'number' ? t.x_pos : undefined,
+            y_pos: typeof t.y_pos === 'number' ? t.y_pos : undefined,
+            rotation: typeof t.rotation === 'number' ? t.rotation : undefined,
+            scale_x: typeof t.scale_x === 'number' ? t.scale_x : undefined,
+            scale_y: typeof t.scale_y === 'number' ? t.scale_y : undefined,
+            name: t.name !== undefined ? t.name : undefined,
+            capacity: t.capacity !== undefined ? t.capacity : undefined
+          }
+        })
+      )
+    );
+
+    res.status(200).json({ message: "Tables updated successfully" });
   } catch (error) { next(error); }
 };

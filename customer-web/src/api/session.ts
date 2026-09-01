@@ -5,6 +5,7 @@ export interface TableSession {
   session_id: string;
   session_token: string;
   table_id: string;
+  branch_id: string;
 }
 
 export const joinTableSession = (

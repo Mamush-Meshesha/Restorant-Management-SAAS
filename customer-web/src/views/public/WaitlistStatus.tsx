@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { getWaitlistStatus } from "@/api/waitlist";
-import type { WaitlistItem } from "@/api/waitlist";
-import { getSocket } from "@/config/socket";
+import { useParams, Link as RouterLink } from "react-router-dom";
+import { getWaitlistStatus } from "../../api/waitlist";
+import type { WaitlistItem } from "../../api/waitlist";
+import { getSocket } from "../../config/socket";
 import { motion } from "framer-motion";
+import { Box, Typography, Container, Button, Card, CardContent, CircularProgress, Stack, Divider } from "@mui/material";
+import { IconArrowLeft, IconCheck, IconClockHour4, IconGlassFull } from "@tabler/icons-react";
 
 export const WaitlistStatus = () => {
   const { id } = useParams();
@@ -36,7 +38,6 @@ export const WaitlistStatus = () => {
     const socket = getSocket();
     
     socket.on("waitlist_updated", () => {
-      // Re-fetch status if the queue updates
       fetchStatus();
     });
 
@@ -45,56 +46,112 @@ export const WaitlistStatus = () => {
     };
   }, [waitlistId]);
 
-  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center"><div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" /></div>;
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "background.default" }}>
+        <CircularProgress color="primary" />
+      </Box>
+    );
+  }
 
-  if (!status) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Entry not found</div>;
+  if (!status) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "background.default" }}>
+        <Typography color="text.secondary">Entry not found</Typography>
+      </Box>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 relative">
-      <Link 
-        to="/" 
-        className="absolute top-6 left-6 text-slate-400 hover:text-white flex items-center transition-colors font-semibold"
-      >
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-        Return to Home
-      </Link>
-      <motion.div 
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="w-full max-w-sm bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 text-center shadow-2xl"
-      >
-        {status.status === "WAITING" && (
-          <>
-            <div className="w-24 h-24 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-4xl font-bold text-blue-400">{position}</span>
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">You're in line!</h2>
-            <p className="text-slate-400 mb-6">There are {position ? position - 1 : 0} parties ahead of you.</p>
-            
-            <div className="bg-slate-900/50 rounded-xl p-4 mb-4">
-              <p className="text-sm text-slate-400 uppercase tracking-wider mb-1">Estimated Wait</p>
-              <p className="text-2xl font-semibold text-white">~{status.quoted_time} mins</p>
-            </div>
-          </>
-        )}
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", position: "relative", py: 8 }}>
+      <Container maxWidth="sm">
+        <Button 
+          component={RouterLink} 
+          to="/"
+          startIcon={<IconArrowLeft />}
+          sx={{ mb: 4 }}
+          color="inherit"
+        >
+          Return Home
+        </Button>
 
-        {status.status === "NOTIFIED" && (
-          <>
-            <div className="w-24 h-24 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-2">Table Ready!</h2>
-            <p className="text-slate-300">Please head to the host stand. We are seating you now.</p>
-          </>
-        )}
+        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }}>
+          <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", textAlign: "center", p: 4, borderRadius: 2 }}>
+            <CardContent>
+              {status.status === "WAITING" && (
+                <Stack spacing={4} alignItems="center">
+                  <Box sx={{ 
+                    width: 100, height: 100, borderRadius: "50%", 
+                    border: "2px solid", borderColor: "primary.main", 
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    bgcolor: "background.paper" 
+                  }}>
+                    <Typography variant="h2" color="primary.main" sx={{ mb: 0 }}>
+                      {position}
+                    </Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="h3" color="primary.main" mb={1}>
+                      You're in line.
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                      There are {position ? position - 1 : 0} parties ahead of you.
+                    </Typography>
+                  </Box>
 
-        {status.status === "SEATED" && (
-          <>
-            <div className="text-green-500 mb-4">Enjoy your meal!</div>
-          </>
-        )}
-      </motion.div>
-    </div>
+                  <Divider flexItem sx={{ my: 2 }} />
+
+                  <Box>
+                    <IconClockHour4 size={28} style={{ opacity: 0.5, marginBottom: 8 }} />
+                    <Typography variant="overline" color="text.secondary" sx={{ display: "block", mb: 0 }}>
+                      Estimated Wait
+                    </Typography>
+                    <Typography variant="h4" color="primary.main">
+                      ~{status.quoted_time || "--"} mins
+                    </Typography>
+                  </Box>
+                </Stack>
+              )}
+
+              {status.status === "NOTIFIED" && (
+                <Stack spacing={4} alignItems="center">
+                  <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 2 }}>
+                    <Box sx={{ 
+                      width: 100, height: 100, borderRadius: "50%", 
+                      bgcolor: "secondary.main", color: "white",
+                      display: "flex", alignItems: "center", justifyContent: "center"
+                    }}>
+                      <IconCheck size={48} />
+                    </Box>
+                  </motion.div>
+                  
+                  <Box>
+                    <Typography variant="h3" color="primary.main" mb={1}>
+                      Table Ready!
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                      Please head to the host stand. We are seating you now.
+                    </Typography>
+                  </Box>
+                </Stack>
+              )}
+
+              {status.status === "SEATED" && (
+                <Stack spacing={4} alignItems="center">
+                  <Box sx={{ color: "primary.main" }}>
+                    <IconGlassFull size={64} stroke={1} />
+                  </Box>
+                  <Typography variant="h3" color="primary.main">
+                    Enjoy your meal!
+                  </Typography>
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </Container>
+    </Box>
   );
 };
 

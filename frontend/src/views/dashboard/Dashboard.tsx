@@ -30,12 +30,9 @@ import {
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageContainer from "../../components/container/PageContainer";
-import { getOrders } from "@/api/_orders";
-import { getRevenueSummary } from "@/api/_analytics";
-import { getKitchenOrders } from "@/api/_kitchen";
-import { getTables } from "@/api/_tables";
+import { getLiveDashboard } from "@/api/_analytics";
 import { useAppSelector } from "@/hooks/auth";
-import type { Order } from "@/types/__restaurant";
+import { useSmartPolling } from "@/hooks/useSmartPolling";
 
 // ─── Motion helpers ───────────────────────────────────────────────────────────
 const fadeUp = {
@@ -94,7 +91,7 @@ const useCounter = (target: number, duration = 1200) => {
 };
 
 // ─── KPI Stat Card ────────────────────────────────────────────────────────────
-const StatCard = ({ title, value, change, positive, icon, accent, sub, index }: StatCardProps) => {
+const StatCard = React.memo(({ title, value, change, positive, icon, accent, sub, index }: StatCardProps) => {
   const theme = useTheme();
   const isNumeric = !isNaN(Number(value.replace(/[$,/]/g, "")));
   const numericVal = isNumeric ? Number(value.replace(/[$,/]/g, "")) : 0;
@@ -192,7 +189,7 @@ const StatCard = ({ title, value, change, positive, icon, accent, sub, index }: 
       </Card>
     </motion.div>
   );
-};
+});
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 const statusConfig: Record<OrderStatus, { bg: string; text: string; label: string }> = {
@@ -234,61 +231,20 @@ const Dashboard = () => {
 
   const fetchDashboard = useCallback(async () => {
     try {
-      // Fetch recent orders
-      const ordersRes = await getOrders({ limit: 6 });
-      const orders: Order[] = ordersRes.data.data || [];
-      setRecentOrders(
-        orders.map((o, idx) => ({
-          id: o.order_number || o.id || `order-${idx}`,  // always a unique key
-          table: o.table?.table_number ? `T-${o.table.table_number}` : "Takeaway",
-          items: o.items?.reduce((s, i) => s + i.quantity, 0) || 0,
-          total: `$${Number(o.total_amount).toFixed(2)}`,
-          status: normaliseStatus(o.status ?? "PENDING"),
-          elapsed: Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000) + "m",
-        }))
-      );
+      if (!branchId) return;
+      const res = await getLiveDashboard(branchId);
+      const data = res.data?.data;
+      if (!data) return;
 
-      // Count active orders (PENDING / CONFIRMED / PREPARING)
-      const activeRes = await getOrders({ status: "PENDING,CONFIRMED,PREPARING", limit: 200 });
-      setActiveOrders((activeRes.data.data || []).length);
-
-      // Revenue summary
-      try {
-        const revRes = await getRevenueSummary();
-        setRevenue(revRes.data?.data?.todayRevenue ?? revRes.data?.data?.today_revenue ?? 0);
-      } catch { /* analytics may not be seeded */ }
-
-      // Tables
-      if (branchId) {
-        const tablesRes = await getTables({ branchId });
-        const allTables = tablesRes.data.data || [];
-        setTables({
-          total: allTables.length,
-          occupied: allTables.filter((t: any) => t.status === "OCCUPIED").length,
-        });
-      }
-
-      // Kitchen load from active kitchen orders
-      const kitchenRes = await getKitchenOrders({ status: "PENDING,PREPARING" });
-      const kitchenOrders: any[] = kitchenRes.data.data || [];
+      setRecentOrders(data.recentOrders || []);
+      setActiveOrders(data.activeOrdersCount || 0);
+      setRevenue(data.todayRevenue || 0);
+      setTables(data.tables || { total: 0, occupied: 0 });
       setKitchenStations([
-        { station: "All Pending", queue: kitchenOrders.filter((o) => o.status === "PENDING").length, capacity: 10, color: "#EF4444", urgent: kitchenOrders.filter((o) => o.status === "PENDING").length > 6 },
-        { station: "Preparing", queue: kitchenOrders.filter((o) => o.status === "PREPARING").length, capacity: 10, color: "#3B82F6", urgent: false },
+        { station: "Pending", queue: data.kitchen?.pending || 0, capacity: 10, color: "#EF4444", urgent: (data.kitchen?.pending || 0) > 6 },
+        { station: "Preparing", queue: data.kitchen?.preparing || 0, capacity: 10, color: "#3B82F6", urgent: false },
       ]);
-
-      // Derive top items from recent orders
-      const itemMap: Record<string, { name: string; count: number; revenue: number }> = {};
-      orders.forEach((o) => {
-        (o.items || []).forEach((i) => {
-          const key = i.menu_item_id;
-          const name = (i as any).menuItem?.name ?? key;
-          if (!itemMap[key]) itemMap[key] = { name, count: 0, revenue: 0 };
-          itemMap[key].count += i.quantity;
-          itemMap[key].revenue += i.unit_price * i.quantity;
-        });
-      });
-      const sorted = Object.values(itemMap).sort((a, b) => b.count - a.count).slice(0, 4);
-      setTopItems(sorted.map((it) => ({ name: it.name, orders: it.count, revenue: `$${it.revenue.toFixed(2)}` })));
+      setTopItems(data.topItems || []);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
     }

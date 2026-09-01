@@ -24,6 +24,11 @@ import notificationRoutes from "./routes/notification.routes";
 import messageRoutes from "./routes/message.routes";
 import sessionRoutes from "./routes/session.routes";
 import waitlistRoutes from "./routes/waitlist.routes";
+import registerRoutes from "./routes/register.routes";
+import syncRoutes from "./routes/sync.routes";
+import deliveryRoutes from "./routes/delivery.routes";
+import loyaltyRoutes from "./routes/loyalty.routes";
+import customerSubscriptionRoutes from "./routes/customer-subscription.routes";
 
 export default (app: Application) => {
   app.use("/api/v1/auth", authRoutes);
@@ -51,4 +56,9 @@ export default (app: Application) => {
   app.use("/api/v1/message", messageRoutes);
   app.use("/api/v1/session", sessionRoutes);
   app.use("/api/v1/waitlist", waitlistRoutes);
+  app.use("/api/v1/register", registerRoutes);
+  app.use("/api/v1/sync", syncRoutes);
+  app.use("/api/v1/delivery", deliveryRoutes);
+  app.use("/api/v1/loyalty", loyaltyRoutes);
+  app.use("/api/v1/customer-subscription", customerSubscriptionRoutes);
 };

@@ -4,8 +4,6 @@ import type { RootState } from "@/redux/store";
 import type { AppRole } from "@/config/roles";
 import DataTablePage, { renderStatusPill } from "./DataTablePage";
 import { getOrders, cancelOrder } from "@/api/_orders";
-import { getCategories, createCategory, updateCategory, deleteCategory, getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/api/_menu";
-import { getInventory, addInventoryItem } from "@/api/_inventory";
 import { getUsers, createUser, updateUser, deleteUser } from "@/api/_users";
 import { getBranches, createBranch, updateBranch } from "@/api/_branches";
 import { getAllRoles, createRole, updateRole, deleteRole } from "@/api/_role";
@@ -54,14 +52,14 @@ export const OrdersPage = () => {
           { field: "order_number", headerName: "Order #", width: 140 },
           { field: "order_type", headerName: "Type", width: 120 },
           { field: "table_name", headerName: "Table", width: 120,
-            valueGetter: (p: any) => p?.row?.table?.name || "Takeaway" },
+            valueGetter: (value: any, row: any) => row?.table?.name || "Takeaway" },
           { field: "items_count", headerName: "Items", width: 80,
-            valueGetter: (p: any) => (p?.row?.items?.length ?? 0) },
+            valueGetter: (value: any, row: any) => (row?.items?.length ?? 0) },
           { field: "total_amount", headerName: "Total", width: 120,
-            valueFormatter: (v: any) => `$${Number(v || 0).toFixed(2)}` },
+            valueFormatter: (value: any) => `$${Number(value || 0).toFixed(2)}` },
           { field: "status", headerName: "Status", width: 140, renderCell: renderStatusPill },
           { field: "created_at", headerName: "Date", flex: 1,
-            valueFormatter: (v: any) => v ? new Date(v).toLocaleString() : "" },
+            valueFormatter: (value: any) => value ? new Date(value).toLocaleString() : "" },
           actionCol,
         ],
         fetchFn: () => getOrders({ limit: 100 }),
@@ -83,7 +81,10 @@ export const ReservationsPage = () => {
   const [tables, setTables] = React.useState<{label: string, value: string}[]>([]);
   React.useEffect(() => {
     // In a real app we need branchId
-    getTables().then(res => setTables((res.data?.data || []).map(t => ({ label: t.table_number, value: t.id })))).catch(console.error);
+    getTables().then(res => setTables((res.data?.data || [])
+      .filter((t: any) => t.status === "AVAILABLE")
+      .map((t: any) => ({ label: t.table_number, value: t.id }))))
+      .catch(console.error);
   }, []);
 
   return (
@@ -212,7 +213,7 @@ export const TablesPage = () => {
 
 // ─── KITCHEN STATIONS ────────────────────────────────────────────────────────
 
-export const KitchenStationsPage = () => {
+export const KitchenStationsPage_old = () => {
   const [branches, setBranches] = React.useState<{label: string, value: string}[]>([]);
   const { isAdminOrManager } = useRoleAccess();
 
@@ -245,243 +246,19 @@ export const KitchenStationsPage = () => {
   );
 };
 
-// ─── MENU CATEGORIES ─────────────────────────────────────────────────────────
 
-export const CategoriesPage = () => {
-  const [categories, setCategories] = React.useState<{label: string, value: string}[]>([]);
-  const { isAdminOrManager } = useRoleAccess();
-  
-  React.useEffect(() => {
-    getCategories().then(res => {
-      // Flatten hierarchy for dropdown
-      const mapCategories = (cats: any[], prefix = ""): {label: string, value: string}[] => {
-        let result: {label: string, value: string}[] = [];
-        cats.forEach(c => {
-          result.push({ label: `${prefix}${c.name}`, value: c.id });
-          if (c.subcategories && c.subcategories.length > 0) {
-            result = result.concat(mapCategories(c.subcategories, `${prefix}-- `));
-          }
-        });
-        return result;
-      };
-      setCategories([{ label: "None (Top Level)", value: "" }, ...mapCategories(res.data?.data || [])]);
-    }).catch(console.error);
-  }, []);
-
-  return (
-    <DataTablePage
-      config={{
-        title: "Menu Categories",
-        description: "Manage menu groupings and subcategories",
-        noun: "Category",
-        columns: [
-          { 
-            field: "name", 
-            headerName: "Name", 
-            flex: 1, 
-            minWidth: 200,
-            renderCell: (params: any) => (
-              <div style={{ paddingLeft: `${(params.row.level || 0) * 20}px`, display: 'flex', alignItems: 'center' }}>
-                {params.row.level > 0 && <span style={{ marginRight: 8, color: '#999' }}>↳</span>}
-                {params.value}
-              </div>
-            )
-          },
-          { field: "parent_name", headerName: "Parent Category", width: 160 },
-          { field: "description", headerName: "Description", flex: 1 },
-          { field: "display_order", headerName: "Order", width: 90 },
-          activeStatusCol,
-          actionCol,
-        ],
-        fetchFn: getCategories,
-        createFn: isAdminOrManager ? createCategory : undefined,
-        updateFn: isAdminOrManager ? updateCategory : undefined,
-        deleteFn: isAdminOrManager ? deleteCategory : undefined,
-        transformFn: (raw) => {
-          // Flatten the hierarchy for the table view
-          const flatten = (cats: any[], parentName = "", level = 0): any[] => {
-            let result: any[] = [];
-            cats.forEach(c => {
-              result.push({ ...c, parent_name: parentName || "—", level });
-              if (c.subcategories && c.subcategories.length > 0) {
-                result = result.concat(flatten(c.subcategories, c.name, level + 1));
-              }
-            });
-            return result;
-          };
-          return flatten(raw.data ?? []);
-        },
-        formSchema: [
-          { field: "name", label: "Category Name", required: true },
-          { field: "parent_id", label: "Parent Category", options: categories },
-          { field: "description", label: "Description" },
-          { field: "display_order", label: "Display Order", type: "number" },
-          { field: "image_url", label: "Category Image", type: "image" },
-        ],
-      }}
-    />
-  );
-};
-
-// ─── MENU ITEMS ───────────────────────────────────────────────────────────────
-
-export const MenuItemsPage = () => {
-  const [categories, setCategories] = React.useState<{label: string, value: string}[]>([]);
-  const { isAdminOrManager } = useRoleAccess();
-
-  React.useEffect(() => {
-    getCategories().then(res => {
-      setCategories((res.data?.data || []).map((c: any) => ({ label: c.name, value: c.id })));
-    }).catch(console.error);
-  }, []);
-
-  return (
-    <DataTablePage
-      config={{
-        title: "Menu Items",
-        description: "All available dishes and drinks",
-        noun: "Item",
-        columns: [
-          nameCol,
-          { field: "base_price", headerName: "Price", width: 110, valueFormatter: (v: any) => `$${Number(v).toFixed(2)}` },
-          { field: "category_name", headerName: "Category", width: 150 },
-          { field: "is_available", headerName: "Status", width: 120, renderCell: (p: any) => renderStatusPill({ ...p, value: p.value ? "Active" : "Inactive" }) },
-          actionCol,
-        ],
-        fetchFn: getMenuItems,
-        createFn: isAdminOrManager ? createMenuItem : undefined,
-        updateFn: isAdminOrManager ? updateMenuItem : undefined,
-        deleteFn: isAdminOrManager ? deleteMenuItem : undefined,
-        transformFn: (raw) =>
-          (raw.data ?? []).map((i: any) => ({
-            ...i,
-            category_name: i.category?.name ?? "",
-          })),
-        formSchema: [
-          { field: "name", label: "Item Name", required: true },
-          { field: "description", label: "Description" },
-          { field: "base_price", label: "Base Price", type: "number", required: true },
-          { field: "category_id", label: "Category", required: true, options: categories.length ? categories : undefined },
-          { field: "image_url", label: "Item Image", type: "image" },
-        ],
-      }}
-    />
-  );
-};
-
-// ─── RECIPES ──────────────────────────────────────────────────────────────────
-
-export const RecipesPage = () => (
-  <DataTablePage
-    config={{
-      title: "Recipes",
-      description: "Kitchen recipes and preparations",
-      noun: "Recipe",
-      columns: [nameCol, { field: "description", headerName: "Description", flex: 1 }, actionCol],
-      // Recipes share menu items endpoint for now
-      fetchFn: getMenuItems,
-      transformFn: (raw) =>
-        (raw.data ?? []).map((i: any) => ({
-          id: i.id,
-          name: i.name,
-          description: i.description ?? "—",
-        })),
-    }}
-  />
-);
 
 // ─── CUSTOMERS ───────────────────────────────────────────────────────────────
 
-export const CustomersPage = () => (
-  <DataTablePage
-    config={{
-      title: "Customers",
-      description: "Customer directory",
-      noun: "Customer",
-      columns: [nameCol,
-        { field: "email", headerName: "Email", flex: 1 },
-        { field: "phone", headerName: "Phone", width: 140 },
-        actionCol,
-      ],
-      fetchFn: getCustomers,
-      createFn: (data) => createCustomer({ name: data.name, email: data.email, phone: data.phone, password: data.password }),
-      transformFn: (raw) => (raw.data ?? []).map((c: any) => ({ ...c })),
-      formSchema: [
-        { field: "name", label: "Customer Name", required: true },
-        { field: "email", label: "Email", type: "email" },
-        { field: "phone", label: "Phone" },
-        { field: "password", label: "Password (Optional)", type: "password" },
-      ],
-    }}
-  />
-);
+// Placeholder removed, CustomersPage is now its own component
 
 // ─── LOYALTY ─────────────────────────────────────────────────────────────────
 
-export const LoyaltyPage = () => (
-  <DataTablePage
-    config={{
-      title: "Loyalty Program",
-      description: "Customer rewards and points",
-      noun: "Program",
-      columns: [nameCol, { field: "description", headerName: "Details", flex: 1 }, actionCol],
-      data: [], // Placeholder until loyalty API is built
-    }}
-  />
-);
+// Placeholder removed, LoyaltyPage is now its own component
 
-// ─── INVENTORY ────────────────────────────────────────────────────────────────
 
-export const InventoryPage = () => (
-  <DataTablePage
-    config={{
-      title: "Inventory",
-      description: "Stock and ingredient management",
-      noun: "Item",
-      columns: [nameCol,
-        { field: "unit", headerName: "Unit", width: 100 },
-        { field: "current_stock", headerName: "Stock Level", width: 120 },
-        { field: "minimum_stock", headerName: "Min. Stock", width: 120 },
-        { field: "cost_per_unit", headerName: "Cost/Unit", width: 120, valueFormatter: (v: any) => `$${Number(v).toFixed(2)}` },
-        {
-          field: "stock_status",
-          headerName: "Status",
-          width: 120,
-          renderCell: (p: any) => renderStatusPill({ ...p }),
-        },
-        actionCol,
-      ],
-      fetchFn: getInventory,
-      createFn: addInventoryItem,
-      transformFn: (raw) =>
-        (raw.data ?? []).map((i: any) => ({
-          ...i,
-          stock_status: i.current_stock <= i.minimum_stock ? "Low Stock" : "In Stock",
-        })),
-      formSchema: [
-        { field: "name", label: "Item Name", required: true },
-        { field: "unit", label: "Unit (kg, liters, etc.)", required: true },
-        { field: "current_stock", label: "Current Stock", type: "number", required: true },
-        { field: "minimum_stock", label: "Minimum Stock", type: "number", required: true },
-        { field: "cost_per_unit", label: "Cost per Unit", type: "number" },
-      ],
-    }}
-  />
-);
 
-// ─── SUPPLIERS ────────────────────────────────────────────────────────────────
 
-export const SuppliersPage = () => (
-  <DataTablePage
-    config={{
-      title: "Suppliers",
-      description: "Vendor contacts",
-      noun: "Supplier",
-      columns: [nameCol, { field: "detail", headerName: "Contact", flex: 1 }, actionCol],
-      data: [], // Placeholder until supplier API is built
-    }}
-  />
-);
 
 // ─── DELIVERY ────────────────────────────────────────────────────────────────
 
@@ -493,7 +270,7 @@ export const DeliveryPage = () => (
       noun: "Delivery",
       columns: [
         { field: "order_number", headerName: "Order #", width: 140 },
-        { field: "total_amount", headerName: "Total", width: 120, valueFormatter: (v: any) => `$${Number(v).toFixed(2)}` },
+        { field: "total_amount", headerName: "Total", width: 120, valueFormatter: (value: any) => `$${Number(value || 0).toFixed(2)}` },
         { field: "status", headerName: "Status", width: 140, renderCell: renderStatusPill },
         { field: "created_at", headerName: "Date", flex: 1, valueFormatter: (v: any) => v ? new Date(v).toLocaleString() : "" },
         actionCol,
@@ -507,147 +284,22 @@ export const DeliveryPage = () => (
   />
 );
 
-// ─── EMPLOYEES ───────────────────────────────────────────────────────────────
 
-export const EmployeesPage = () => {
-  const [roles, setRoles] = React.useState<{label: string, value: string}[]>([]);
-  const [branches, setBranches] = React.useState<{label: string, value: string}[]>([]);
-  React.useEffect(() => {
-    getAllRoles().then(res => {
-      setRoles((res.data?.data || []).map((r: any) => ({ label: r.name, value: r.id || r.role_id })));
-    }).catch(console.error);
-    getBranches().then(res => {
-      setBranches((res.data?.data || []).map((b: any) => ({ label: b.name, value: b.id })));
-    }).catch(console.error);
-  }, []);
 
-  return (
-    <DataTablePage
-      config={{
-        title: "Employees",
-        description: "Staff directory",
-        noun: "Employee",
-        columns: [
-          nameCol,
-          { field: "email", headerName: "Email", flex: 1 },
-          { field: "role_name", headerName: "Role", width: 160 },
-          { field: "branch_name", headerName: "Branch", width: 160 },
-          activeStatusCol,
-          actionCol,
-        ],
-        fetchFn: getUsers,
-        createFn: createUser,
-        updateFn: (id, data) => updateUser(id, data),
-        deleteFn: deleteUser,
-        transformFn: (raw) =>
-          (raw.data ?? []).map((u: any) => ({
-            ...u,
-            name: `${u.first_name} ${u.last_name}`,
-            role_name: u.role?.name ?? u.role?.role_name ?? "—",
-            branch_name: u.branch?.name ?? "—",
-          })),
-        formSchema: [
-          { field: "first_name", label: "First Name", required: true },
-          { field: "last_name", label: "Last Name", required: true },
-          { field: "email", label: "Email", type: "email", required: true },
-          { field: "username", label: "Username", required: true },
-          { field: "password", label: "Password", type: "password" },
-          { field: "role_id", label: "Role", required: true, options: roles.length ? roles : undefined },
-          { field: "branch_id", label: "Branch", required: true, options: branches.length ? branches : undefined },
-        ],
-      }}
-    />
-  );
-};
 
-// ─── DEPARTMENTS ─────────────────────────────────────────────────────────────
 
-export const DepartmentsPage = () => (
-  <DataTablePage
-    config={{
-      title: "Departments",
-      description: "Company structure",
-      noun: "Department",
-      columns: [nameCol, { field: "description", headerName: "Description", flex: 1 }, actionCol],
-      data: [], // Placeholder until department API is built
-    }}
-  />
-);
-
-// ─── ATTENDANCE ───────────────────────────────────────────────────────────────
-
-export const AttendancePage = () => (
-  <DataTablePage
-    config={{
-      title: "Attendance",
-      description: "Staff timesheets",
-      noun: "Record",
-      columns: [nameCol, { field: "detail", headerName: "Hours", flex: 1 }, actionCol],
-      data: [], // Placeholder until attendance API is built
-    }}
-  />
-);
 
 // ─── REVENUE ─────────────────────────────────────────────────────────────────
 
-export const RevenuePage = () => (
-  <DataTablePage
-    config={{
-      title: "Revenue Reports",
-      description: "Financial analytics",
-      noun: "Report",
-      columns: [
-        { field: "date", headerName: "Date", width: 140 },
-        { field: "total_revenue", headerName: "Revenue", flex: 1, valueFormatter: (v: any) => `$${Number(v || 0).toFixed(2)}` },
-        { field: "order_count", headerName: "Orders", width: 120 },
-        { field: "avg_order_value", headerName: "Avg. Order", width: 140, valueFormatter: (v: any) => `$${Number(v || 0).toFixed(2)}` },
-        actionCol,
-      ],
-      fetchFn: getRevenueReport,
-      transformFn: (raw) =>
-        (raw.data ?? []).map((r: any, i: number) => ({ id: r.id ?? i.toString(), ...r })),
-    }}
-  />
-);
+// ─── REVENUE (REPLACED) ────────────────────────────────────────────────────────
 
-// ─── EXPENSES ────────────────────────────────────────────────────────────────
+// ─── EXPENSES (REPLACED) ──────────────────────────────────────────────────────
 
-export const ExpensesPage = () => (
-  <DataTablePage
-    config={{
-      title: "Expenses",
-      description: "Outbound cashflow",
-      noun: "Expense",
-      columns: [nameCol, { field: "amount", headerName: "Amount", flex: 1 }, { field: "status", headerName: "Status", width: 120, renderCell: renderStatusPill }, actionCol],
-      data: [],
-    }}
-  />
-);
-
-// ─── TRANSACTIONS ─────────────────────────────────────────────────────────────
-
-export const TransactionsPage = () => (
-  <DataTablePage
-    config={{
-      title: "Transactions",
-      description: "Detailed payment history",
-      noun: "Transaction",
-      columns: [
-        { field: "order_number", headerName: "Order #", width: 140 },
-        { field: "total_amount", headerName: "Amount", width: 140, valueFormatter: (v: any) => `$${Number(v).toFixed(2)}` },
-        { field: "status", headerName: "Status", width: 140, renderCell: renderStatusPill },
-        { field: "created_at", headerName: "Date", flex: 1, valueFormatter: (v: any) => v ? new Date(v).toLocaleString() : "" },
-        actionCol,
-      ],
-      fetchFn: () => getOrders({ status: "SERVED,CANCELLED", limit: 100 }),
-      transformFn: (raw) => (raw.data ?? []).map((o: any) => ({ ...o })),
-    }}
-  />
-);
+// ─── TRANSACTIONS (REPLACED) ──────────────────────────────────────────────────
 
 // ─── BRANCHES ────────────────────────────────────────────────────────────────
 
-export const BranchesPage = () => {
+export const BranchesPage_old = () => {
   const { isSuperAdmin, isCompanyAdmin } = useRoleAccess();
   const canManage = isSuperAdmin || isCompanyAdmin;
 
@@ -682,7 +334,7 @@ export const BranchesPage = () => {
 
 // ─── ROLES ────────────────────────────────────────────────────────────────────
 
-export const RolesPage = () => {
+export const RolesPage_old = () => {
   const { isSuperAdmin, isCompanyAdmin } = useRoleAccess();
   const canManage = isSuperAdmin || isCompanyAdmin;
 
@@ -714,7 +366,7 @@ export const RolesPage = () => {
 
 // ─── USERS ────────────────────────────────────────────────────────────────────
 
-export const UsersPage = () => {
+export const UsersPage_old = () => {
   const [roles, setRoles] = React.useState<{label: string, value: string}[]>([]);
   const { isAdminOrManager } = useRoleAccess();
 
@@ -764,7 +416,7 @@ export const UsersPage = () => {
 
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
 
-export const SettingsPage = () => (
+export const SettingsPage_old = () => (
   <DataTablePage
     config={{
       title: "Settings",

@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import * as controller from '../../controller/user.controller';
-import { extractInstituteData, requireRole } from '../../middleware/institute.middleware';
+import { extractInstituteData, requirePermission } from '../../middleware/institute.middleware';
 
 const router = Router();
-router.post('/', extractInstituteData, requireRole('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'), controller.create_user);
-router.get('/', extractInstituteData, requireRole('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'), controller.get_users);
-router.put('/:id', extractInstituteData, requireRole('SUPERADMIN', 'COMPANY_ADMIN', 'BRANCH_MANAGER'), controller.update_user);
+router.post('/2fa/toggle', extractInstituteData, controller.toggle2fa);
+router.post('/', extractInstituteData, requirePermission('USERS', 'can_create'), controller.create_user);
+router.get('/', extractInstituteData, requirePermission('USERS', 'can_read'), controller.get_users);
+router.put('/:id', extractInstituteData, requirePermission('USERS', 'can_update'), controller.update_user);
 
 export default router;

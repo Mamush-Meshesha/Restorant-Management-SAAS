@@ -24,27 +24,19 @@ export default function MenuViewer() {
     const fetchMenu = async () => {
       try {
         // First log the scan (this validates the token and gets the branch_id)
-        await axios.get(`${import.meta.env.VITE_API_URL}/api/v1/qr/scan/MENU/${token}`);
+        const qrRes = await axios.get(`${import.meta.env.VITE_API_URL}/qr/scan/MENU/${token}`);
+        const qrData = qrRes.data.data;
+        
+        if (!qrData || !qrData.branch || !qrData.branch.organization_id) {
+          throw new Error("Invalid QR code or branch data missing");
+        }
 
+        // Fetch real menu data for the branch from the backend
+        const menuRes = await axios.get(`${import.meta.env.VITE_API_URL}/menu/categories?organizationId=${qrData.branch.organization_id}`);
 
-        // In a real app, we would now fetch the menu categories and items for this branch
-        // Mocking for now based on the architecture
         setMenuData({
-          branchName: "Main Branch",
-          categories: [
-            {
-              id: 1, name: "Starters", items: [
-                { id: 101, name: "Bruschetta", price: 8.99, description: "Grilled bread with garlic, tomatoes, olive oil." },
-                { id: 102, name: "Calamari", price: 12.50, description: "Fried squid rings with marinara sauce." }
-              ]
-            },
-            {
-              id: 2, name: "Mains", items: [
-                { id: 201, name: "Grilled Salmon", price: 24.99, description: "Fresh Atlantic salmon with seasonal vegetables." },
-                { id: 202, name: "Ribeye Steak", price: 34.00, description: "12oz USDA Prime ribeye, garlic mashed potatoes." }
-              ]
-            }
-          ]
+          branchName: qrData.branch.name || "Main Branch",
+          categories: menuRes.data.data || []
         });
         setLoading(false);
       } catch (err) {
@@ -72,30 +64,52 @@ export default function MenuViewer() {
         </Typography>
       </Box>
 
-      {menuData.categories.map((cat: any) => (
-        <Box key={cat.id} mb={5}>
-          <Typography variant="h4" sx={{ mb: 3, borderBottom: '2px solid #e0e0e0', pb: 1, fontFamily: 'serif' }}>
-            {cat.name}
-          </Typography>
-          <Grid container spacing={3}>
-            {cat.items.map((item: any) => (
-              <Grid size={{ xs: 12, sm: 6 }} key={item.id}>
-                <Card elevation={0} sx={{ border: '1px solid #eaeaea', borderRadius: '12px', height: '100%' }}>
-                  <CardContent>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                      <Typography variant="h6" fontWeight="bold">{item.name}</Typography>
-                      <Typography variant="h6" color="primary" fontWeight="bold">${item.price.toFixed(2)}</Typography>
-                    </Box>
-                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                      {item.description}
-                    </Typography>
-                  </CardContent>
-                </Card>
+          {menuData.categories.map((category: any) => (
+            <Box key={category.id} mb={6}>
+              <Typography variant="h5" fontWeight={700} mb={3} color="primary.main">
+                {category.name}
+              </Typography>
+              
+              <Grid container spacing={3}>
+                {category.items?.map((item: any) => (
+                  <Grid item xs={12} md={6} key={item.id}>
+                    <Card sx={{ 
+                      borderRadius: 3, 
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}>
+                      {item.image_url && (
+                        <Box 
+                          sx={{ 
+                            width: '100%', 
+                            height: 180, 
+                            backgroundImage: `url(${item.image_url})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center'
+                          }} 
+                        />
+                      )}
+                      <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                          <Typography variant="h6" fontWeight={700}>{item.name}</Typography>
+                          <Typography variant="h6" fontWeight={800} color="primary.main">
+                            ${Number(item.base_price).toFixed(2)}
+                          </Typography>
+                        </Box>
+                        {item.description && (
+                          <Typography variant="body2" color="text.secondary" mb={2}>
+                            {item.description}
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
-        </Box>
-      ))}
+            </Box>
+          ))}
     </Box>
   );
 }

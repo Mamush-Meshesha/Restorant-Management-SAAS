@@ -13,11 +13,13 @@ export const addInventoryItem = (
   api.post("/inventory", data);
 
 export const adjustStock = (
-  data: { item_id: string; quantity: number; type: 'ADD' | 'DEDUCT'; reason?: string }
-): Promise<AxiosResponse<{ message: string }>> =>
-  api.post("/inventory/adjust", data);
+  data: { item_id: string; quantity: number; type: 'ADD' | 'DEDUCT'; reason: string }
+): Promise<AxiosResponse<{ message: string }>> => {
+  const quantity_changed = data.type === 'ADD' ? data.quantity : -data.quantity;
+  return api.post("/inventory/adjust", { item_id: data.item_id, quantity_changed, reason: data.reason });
+};
 
 export const logWaste = (
-  data: { item_id: string; quantity: number; reason?: string }
+  data: { item_id: string; item_name: string; quantity: number; cost_loss: number; reason: string }
 ): Promise<AxiosResponse<{ message: string }>> =>
   api.post("/inventory/waste", data);

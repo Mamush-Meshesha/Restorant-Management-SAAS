@@ -10,7 +10,11 @@ export interface Credential {
 
 export const loginUser = (
   credential: Credential
-): Promise<AxiosResponse<AuthResponse>> => api.post("/auth/login", credential);
+): Promise<AxiosResponse<AuthResponse | { message: string, requires_2fa: boolean, userId: string }>> => api.post("/auth/login", credential);
+
+export const verify2FA = (
+  data: { userId: string, code: string }
+): Promise<AxiosResponse<AuthResponse>> => api.post("/auth/verify-2fa", data);
 
 // ── Refresh Token ────────────────────────────────────────────────────────────
 export interface RefreshTokenRequest {

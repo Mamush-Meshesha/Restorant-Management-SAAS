@@ -1,19 +1,18 @@
-import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, alpha, Badge, Drawer, List, ListItem, ListItemButton, ListItemText, Divider } from "@mui/material";
-import { IconMenu2, IconUser, IconShoppingBag, IconBell } from "@tabler/icons-react";
+import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, alpha, Badge } from "@mui/material";
+import { IconUser, IconShoppingBag, IconBell } from "@tabler/icons-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppSelector } from "../../redux/hooks";
-import { useEffect, useState } from "react";
+import { useEffect, useState, ReactNode } from "react";
 import { getNotificationsApi } from "../../api/notifications";
 import LiveActivityBanner from "./LiveActivityBanner";
 
 export default function Header() {
   const location = useLocation();
-  const { isAuthenticated } = useAppSelector(state => state.user);
-  const cartItems = useAppSelector(state => state.cart.items);
+  const { isAuthenticated } = useAppSelector((state: any) => state.user);
+  const cartItems = useAppSelector((state: any) => state.cart.items);
   const navigate = useNavigate();
 
   const [unreadCount, setUnreadCount] = useState(0);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -24,7 +23,7 @@ export default function Header() {
     const fetchNotifications = async () => {
       try {
         const notifs = await getNotificationsApi();
-        setUnreadCount(notifs.filter(n => !n.is_read).length);
+        setUnreadCount(notifs.filter((n: any) => !n.is_read).length);
       } catch (e) {
         console.error("Failed to fetch notifications", e);
       }
@@ -35,66 +34,21 @@ export default function Header() {
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  const cartItemCount = cartItems.reduce((total, item) => total + item.qty, 0);
+  const cartItemCount = cartItems.reduce((total: number, item: any) => total + item.qty, 0);
 
   const navItems = [
     { label: "Locations", path: "/locations" },
     { label: "Menu", path: "/menu" },
     { label: "Reservations", path: "/reservations" },
-    { label: "Account", path: isAuthenticated ? "/account" : "/login" },
+    { label: "Waitlist", path: "/waitlist/join/e8e2cdf0-f4eb-4ac2-90cc-adbe3a0f3425" },
   ];
-
-  const handleDrawerToggle = () => {
-    setMobileOpen((prevState) => !prevState);
-  };
-
-  const drawer = (
-    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
-      <Typography variant="h6" sx={{ my: 2, color: 'primary.main', fontWeight: 700 }}>
-        RÉSERVER
-      </Typography>
-      <Divider />
-      <List>
-        {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.path);
-          return (
-            <ListItem key={item.label} disablePadding>
-              <ListItemButton component={Link} to={item.path} sx={{ textAlign: 'center' }}>
-                <ListItemText 
-                  primary={item.label} 
-                  primaryTypographyProps={{ 
-                    color: isActive ? 'secondary.main' : 'text.primary',
-                    fontWeight: isActive ? 600 : 400
-                  }} 
-                />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
-        {isAuthenticated && (
-          <ListItem disablePadding>
-            <ListItemButton component={Link} to="/account" sx={{ textAlign: 'center' }}>
-              <ListItemText primary="My Account" />
-            </ListItemButton>
-          </ListItem>
-        )}
-      </List>
-    </Box>
-  );
 
   return (
     <AppBar position="sticky" sx={{ top: 0, zIndex: 1100 }}>
       <LiveActivityBanner />
       <Container maxWidth="xl">
-        <Toolbar disableGutters sx={{ height: 80, justifyContent: "space-between" }}>
+        <Toolbar disableGutters sx={{ height: { xs: 60, md: 80 }, justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <IconButton 
-              sx={{ display: { xs: "flex", md: "none" } }} 
-              color="inherit"
-              onClick={handleDrawerToggle}
-            >
-              <IconMenu2 />
-            </IconButton>
             <Typography
               variant="h5"
               component={Link}
@@ -102,10 +56,11 @@ export default function Header() {
               sx={{
                 textDecoration: "none",
                 color: "primary.main",
-                fontWeight: 700,
-                letterSpacing: "-0.02em",
+                fontWeight: 800,
+                letterSpacing: "-0.03em",
                 display: "flex",
-                alignItems: "center"
+                alignItems: "center",
+                fontFamily: '"Cormorant Garamond", serif',
               }}
             >
               RÉSERVER
@@ -123,7 +78,7 @@ export default function Header() {
                   sx={{
                     textDecoration: "none",
                     color: isActive ? "secondary.main" : "text.secondary",
-                    fontWeight: 500,
+                    fontWeight: 600,
                     fontSize: "0.95rem",
                     transition: "color 0.2s",
                     position: "relative",
@@ -153,7 +108,7 @@ export default function Header() {
               component={Link}
               to={isAuthenticated ? "/account" : "/login"}
               color="inherit"
-              sx={{ '&:hover': { bgcolor: alpha('#2b2118', 0.05) } }}
+              sx={{ display: { xs: "none", md: "inline-flex" }, '&:hover': { bgcolor: alpha('#2b2118', 0.05) } }}
             >
               <IconUser size={22} stroke={1.5} />
             </IconButton>
@@ -194,24 +149,6 @@ export default function Header() {
           </Box>
         </Toolbar>
       </Container>
-      
-      <nav>
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
-          }}
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 250, bgcolor: 'background.paper' },
-          }}
-        >
-          {drawer}
-        </Drawer>
-      </nav>
     </AppBar>
   );
 }
-

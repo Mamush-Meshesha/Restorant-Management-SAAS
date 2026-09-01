@@ -20,3 +20,10 @@ export const createCustomer = (data: {
   phone?: string;
 }): Promise<AxiosResponse<{ message: string; data: Customer }>> =>
   api.post("/customer", data);
+
+export const updateCustomer = (id: string, data: {
+  name?: string;
+  email?: string;
+  phone?: string;
+}): Promise<AxiosResponse<{ message: string; data: Customer }>> =>
+  api.put(`/customer/${id}`, data);

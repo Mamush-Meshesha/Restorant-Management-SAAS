@@ -9,6 +9,7 @@ interface AuthState {
   refreshToken: string | null;
   loginExpiry: string | null;
   avatar: string | null;
+  subscription?: any | null; // Stores the active subscription object
 }
 
 // === INITIAL STATE ===
@@ -19,6 +20,7 @@ const initialState: AuthState = {
   refreshToken: null,
   loginExpiry: null,
   avatar: null,
+  subscription: undefined,
 };
 
 // === SLICE ===
@@ -56,6 +58,9 @@ const authSlice = createSlice({
     setAuthTokenExpiry(state, action: PayloadAction<string>) {
       state.loginExpiry = action.payload;
     },
+    setSubscription(state, action: PayloadAction<any>) {
+      state.subscription = action.payload;
+    },
     logoutFinished(state) {
       state.currentUser = undefined;
       state.avatar = null;
@@ -71,6 +76,14 @@ const authSlice = createSlice({
         (state.currentUser as User & { firstTime: boolean }).firstTime = false; // Optional: if you really expect this
       }
     },
+    updateUserOrganization(state, action: PayloadAction<any>) {
+      if (state.currentUser) {
+        state.currentUser.organization = {
+          ...state.currentUser.organization,
+          ...action.payload
+        };
+      }
+    },
   },
 });
 
@@ -83,6 +96,8 @@ export const {
   setFirstTime,
   setAuthTokenExpiry,
   setRefreshedToken,
+  setSubscription,
+  updateUserOrganization,
 } = authSlice.actions;
 
 export default authSlice.reducer;

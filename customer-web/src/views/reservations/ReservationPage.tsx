@@ -1,49 +1,42 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Box, Container, Typography, Grid, Stack, Button, Divider,
-  alpha, TextField, Stepper, Step, StepLabel, Card, CardContent, Alert
+  alpha, TextField, Stepper, Step, StepLabel, Card, CardContent, Alert,
+  MenuItem, Select, FormControl, InputLabel, CircularProgress
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconUsers, IconMapPin, IconCheck, IconCalendar, IconClock } from "@tabler/icons-react";
-import { createReservationApi, getTablesApi } from "../../api/reservations";
+import { IconUsers, IconMapPin, IconCheck, IconCalendar, IconClock, IconBuildingStore, IconArmchair } from "@tabler/icons-react";
+import { createReservationApi, getAvailableTablesApi, getTimeSlotsApi } from "../../api/reservations";
+import { getBranchesApi } from "../../api/branches";
 import { useAppSelector } from "../../redux/hooks";
 
-const STEPS = ["Choose Date & Time", "Select Preferences", "Confirm Details"];
-
-const TIME_SLOTS = [
-  { time: "12:00 PM", available: true },
-  { time: "12:30 PM", available: true },
-  { time: "1:00 PM", available: false },
-  { time: "1:30 PM", available: true },
-  { time: "6:00 PM", available: true },
-  { time: "6:30 PM", available: true },
-  { time: "7:00 PM", available: false },
-  { time: "7:30 PM", available: true },
-  { time: "8:00 PM", available: true },
-  { time: "8:30 PM", available: false },
-  { time: "9:00 PM", available: true },
-  { time: "9:30 PM", available: true },
-];
-
-const SEATING_AREAS = [
-  { id: "window", label: "Window Seating", desc: "Panoramic city views" },
-  { id: "outdoor", label: "Outdoor Terrace", desc: "Al fresco dining" },
-  { id: "vip", label: "VIP Booth", desc: "Maximum privacy" },
-  { id: "private", label: "Private Dining Room", desc: "Exclusive event space" },
-];
+const STEPS = ["Choose Location & Time", "Select Table", "Confirm Details"];
 
 export default function ReservationPage() {
   const [step, setStep] = useState(0);
+  
+  // Step 0 states
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState("");
   const [party, setParty] = useState(2);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [area, setArea] = useState("");
+  const [timeSlots, setTimeSlots] = useState<{time: string, available: boolean}[]>([]);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  
+  // Step 1 states
+  const [areaFilter, setAreaFilter] = useState("all");
+  const [allAvailableTables, setAllAvailableTables] = useState<any[]>([]);
+  const [selectedTable, setSelectedTable] = useState<any>(null);
+  const [loadingTables, setLoadingTables] = useState(false);
+  const [note, setNote] = useState("");
+  
+  // Step 2 states
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [note, setNote] = useState("");
+  
   const [confirmed, setConfirmed] = useState(false);
-  const [tables, setTables] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -58,20 +51,97 @@ export default function ReservationPage() {
   }, [userProfile]);
 
   useEffect(() => {
-    const fetchTables = async () => {
+    const fetchBranches = async () => {
       try {
-        const data = await getTablesApi();
-        setTables(data);
+        const data = await getBranchesApi();
+        setBranches(data);
+        if (data.length > 0) setSelectedBranch(data[0].id);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load branches", err);
       }
     };
-    fetchTables();
+    fetchBranches();
   }, []);
 
+  useEffect(() => {
+    if (selectedBranch && date && party) {
+      const fetchTimeSlots = async () => {
+        setLoadingTimeSlots(true);
+        try {
+          const slots = await getTimeSlotsApi({ branch_id: selectedBranch, date, guest_count: party });
+          setTimeSlots(slots);
+          // If the previously selected time is no longer available, clear it
+          if (time && !slots.find((s: any) => s.time === time && s.available)) {
+            setTime("");
+          }
+        } catch (err) {
+          console.error("Failed to load time slots", err);
+        } finally {
+          setLoadingTimeSlots(false);
+        }
+      };
+      fetchTimeSlots();
+    } else {
+      setTimeSlots([]);
+    }
+  }, [selectedBranch, date, party]);
+
+  useEffect(() => {
+    if (step === 1 && selectedBranch && date && time) {
+      const fetchTables = async () => {
+        setLoadingTables(true);
+        setError("");
+        try {
+          const [year, month, day] = date.split("-").map(Number);
+          const [timeParts, modifier] = time.split(" ");
+          let [hours, minutes] = timeParts.split(":").map(Number);
+          if (modifier === "PM" && hours !== 12) hours += 12;
+          else if (modifier === "AM" && hours === 12) hours = 0;
+          const dateObj = new Date(year, month - 1, day, hours, minutes, 0);
+
+          const tables = await getAvailableTablesApi({
+            reservation_time: dateObj.toISOString(),
+            guest_count: party,
+            branch_id: selectedBranch
+          });
+          setAllAvailableTables(tables);
+          
+          if (selectedTable && !tables.find((t: any) => t.id === selectedTable.id)) {
+            setSelectedTable(null);
+          }
+        } catch (err: any) {
+          setError(err?.response?.data?.message || "Failed to load tables.");
+        } finally {
+          setLoadingTables(false);
+        }
+      };
+      fetchTables();
+    }
+  }, [step, selectedBranch, date, time, party]);
+
+  const seatingFilters = useMemo(() => {
+    const areas = new Set<string>(["Window", "Outdoor", "VIP", "Private"]);
+    allAvailableTables.forEach(t => {
+      if (t.diningArea?.name) areas.add(t.diningArea.name);
+    });
+    return ["all", ...Array.from(areas)];
+  }, [allAvailableTables]);
+
+  const filteredTables = useMemo(() => {
+    if (areaFilter === "all") return allAvailableTables;
+    const filterLower = areaFilter.toLowerCase();
+    return allAvailableTables.filter(t => {
+      const areaName = t.diningArea?.name?.toLowerCase() || "";
+      const tableName = t.name.toLowerCase();
+      // If the filter is 'Outdoor', 'Patio' should also match, but let's keep it simple with substring match.
+      // If it's a dynamic area exact match, or substring match on name/area.
+      return areaName.includes(filterLower) || tableName.includes(filterLower);
+    });
+  }, [allAvailableTables, areaFilter]);
+
   const canGoNext = () => {
-    if (step === 0) return date && time;
-    if (step === 1) return area;
+    if (step === 0) return selectedBranch && date && time;
+    if (step === 1) return selectedTable;
     return name && email && phone;
   };
 
@@ -80,32 +150,22 @@ export default function ReservationPage() {
     setSubmitting(true);
     setError("");
     try {
-      // Find a table that roughly matches capacity
-      const suitableTable = tables.find(t => t.capacity >= party) || tables[0];
-      if (!suitableTable) {
-        throw new Error("No tables available for your party size.");
-      }
-
-      // Safer Date parsing avoiding strict ISO string formatting issues
       const [year, month, day] = date.split("-").map(Number);
       const [timeParts, modifier] = time.split(" ");
       let [hours, minutes] = timeParts.split(":").map(Number);
       
-      if (modifier === "PM" && hours !== 12) {
-        hours += 12;
-      } else if (modifier === "AM" && hours === 12) {
-        hours = 0;
-      }
+      if (modifier === "PM" && hours !== 12) hours += 12;
+      else if (modifier === "AM" && hours === 12) hours = 0;
 
       const dateObj = new Date(year, month - 1, day, hours, minutes, 0);
 
       await createReservationApi({
-        table_id: suitableTable.id,
+        table_id: selectedTable.id,
         customer_name: name,
         customer_phone: phone,
         reservation_time: dateObj.toISOString(),
         guest_count: party,
-        special_requests: `Area: ${area}. ${note}`
+        special_requests: `Area: ${selectedTable.diningArea?.name || 'Main Area'}. ${note}`
       });
 
       setConfirmed(true);
@@ -116,6 +176,8 @@ export default function ReservationPage() {
     }
   };
 
+  const selectedBranchName = branches.find(b => b.id === selectedBranch)?.name || "";
+
   return (
     <Box sx={{ bgcolor: "background.default", minHeight: "100vh" }}>
       <Box sx={{ bgcolor: "primary.main", color: "white", py: 12, textAlign: "center" }}>
@@ -125,7 +187,7 @@ export default function ReservationPage() {
           </Typography>
           <Typography variant="h2" sx={{ mb: 3 }}>Reserve Your Table</Typography>
           <Typography variant="body1" sx={{ opacity: 0.8, maxWidth: 600, mx: "auto" }}>
-            Experience seamless reservation management. Your perfect evening begins here.
+            Experience seamless reservation management. Choose your exact table based on live availability.
           </Typography>
         </Container>
       </Box>
@@ -147,10 +209,10 @@ export default function ReservationPage() {
                   <CardContent>
                     <Stack spacing={2}>
                       {[
-                        { label: "Date", value: date },
-                        { label: "Time", value: time },
+                        { label: "Location", value: selectedBranchName },
+                        { label: "Date & Time", value: `${date} at ${time}` },
                         { label: "Party Size", value: `${party} guests` },
-                        { label: "Seating", value: SEATING_AREAS.find((a) => a.id === area)?.label ?? "" },
+                        { label: "Table", value: `${selectedTable?.name} (${selectedTable?.diningArea?.name || "Main Area"})` },
                       ].map((row) => (
                         <Box key={row.label}>
                           <Stack direction="row" justifyContent="space-between">
@@ -177,6 +239,18 @@ export default function ReservationPage() {
               {step === 0 && (
                 <Box>
                   <Typography variant="h5" fontWeight={600} mb={3} display="flex" alignItems="center" gap={1.5}>
+                    <IconBuildingStore size={22} /> Select Location
+                  </Typography>
+                  <FormControl fullWidth sx={{ mb: 6, maxWidth: 400 }}>
+                    <InputLabel>Branch</InputLabel>
+                    <Select value={selectedBranch} label="Branch" onChange={(e) => setSelectedBranch(e.target.value)}>
+                      {branches.map((b) => (
+                        <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <Typography variant="h5" fontWeight={600} mb={3} display="flex" alignItems="center" gap={1.5}>
                     <IconUsers size={22} /> How many guests?
                   </Typography>
                   <Stack direction="row" spacing={1} mb={6} flexWrap="wrap" useFlexGap>
@@ -198,16 +272,21 @@ export default function ReservationPage() {
                       <Typography variant="h5" fontWeight={600} mb={3} display="flex" alignItems="center" gap={1.5}>
                         <IconClock size={22} /> Choose a time
                       </Typography>
-                      <Grid container spacing={1.5}>
-                        {TIME_SLOTS.map((slot) => (
+                      {loadingTimeSlots ? (
+                        <CircularProgress size={24} sx={{ ml: 2 }} />
+                      ) : timeSlots.length === 0 ? (
+                        <Typography color="text.secondary">No time slots available for this date.</Typography>
+                      ) : (
+                        <Grid container spacing={1.5}>
+                          {timeSlots.map((slot) => (
                           <Grid size={{ xs: 4, sm: 3 }} key={slot.time}>
                             <Box onClick={() => slot.available && setTime(slot.time)} sx={{ py: 1.5, textAlign: "center", borderRadius: 1.5, border: "1px solid", borderColor: !slot.available ? alpha("#2b2118", 0.1) : time === slot.time ? "secondary.main" : alpha("#2b2118", 0.2), bgcolor: !slot.available ? alpha("#2b2118", 0.03) : time === slot.time ? alpha("#d4af37", 0.1) : "transparent", color: !slot.available ? alpha("#2b2118", 0.3) : time === slot.time ? "secondary.dark" : "text.primary", cursor: slot.available ? "pointer" : "not-allowed", fontWeight: time === slot.time ? 700 : 400, fontSize: "0.9rem", transition: "all 0.2s" }}>
                               {slot.time}
-                              {!slot.available && <Typography variant="caption" display="block" sx={{ opacity: 0.6 }}>Full</Typography>}
                             </Box>
                           </Grid>
                         ))}
                       </Grid>
+                      )}
                     </Box>
                   )}
                 </Box>
@@ -217,31 +296,83 @@ export default function ReservationPage() {
               {step === 1 && (
                 <Box>
                   <Typography variant="h5" fontWeight={600} mb={2} display="flex" alignItems="center" gap={1.5}>
-                    <IconMapPin size={22} /> Choose your seating preference
+                    <IconMapPin size={22} /> Filter by seating preference
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" mb={4}>Subject to availability at the time of confirmation.</Typography>
-                  <Grid container spacing={3}>
-                    {SEATING_AREAS.map((a) => (
-                      <Grid size={{ xs: 12, sm: 6 }} key={a.id}>
-                        <Box onClick={() => setArea(a.id)} sx={{ p: 4, borderRadius: 2, border: "2px solid", borderColor: area === a.id ? "secondary.main" : alpha("#2b2118", 0.12), bgcolor: area === a.id ? alpha("#d4af37", 0.08) : "background.paper", cursor: "pointer", transition: "all 0.2s", "&:hover": { borderColor: area === a.id ? "secondary.main" : alpha("#2b2118", 0.3) } }}>
-                          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                            <Box>
-                              <Typography variant="h6" fontWeight={600} mb={0.5}>{a.label}</Typography>
-                              <Typography variant="body2" color="text.secondary">{a.desc}</Typography>
-                            </Box>
-                            {area === a.id && (
-                              <Box sx={{ width: 28, height: 28, borderRadius: "50%", bgcolor: "secondary.main", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <IconCheck size={16} color="#2b2118" />
+                  
+                  {loadingTables ? (
+                    <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+                      <CircularProgress color="secondary" />
+                    </Box>
+                  ) : allAvailableTables.length === 0 ? (
+                    <Alert severity="warning" sx={{ mb: 4 }}>
+                      No tables available for {party} guests at {time}. Please try a different time or party size.
+                    </Alert>
+                  ) : (
+                    <>
+                      <Stack direction="row" spacing={1} sx={{ mb: 4, overflowX: "auto", pb: 1 }}>
+                        {seatingFilters.map((a) => (
+                          <Box 
+                            key={a}
+                            onClick={() => setAreaFilter(a)}
+                            sx={{
+                              px: 3, py: 1, 
+                              borderRadius: 8, 
+                              border: "1px solid", 
+                              borderColor: areaFilter === a ? "secondary.main" : alpha("#2b2118", 0.2),
+                              bgcolor: areaFilter === a ? alpha("#d4af37", 0.1) : "transparent",
+                              color: areaFilter === a ? "secondary.dark" : "text.primary",
+                              fontWeight: areaFilter === a ? 600 : 400,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              transition: "all 0.2s"
+                            }}>
+                            {a === "all" ? "Any Seating" : a}
+                          </Box>
+                        ))}
+                      </Stack>
+
+                      <Typography variant="h5" fontWeight={600} mb={3} display="flex" alignItems="center" gap={1.5}>
+                        <IconArmchair size={22} /> Select your table
+                      </Typography>
+                      
+                      {filteredTables.length === 0 ? (
+                        <Alert severity="info">
+                          No {areaFilter} tables available.
+                        </Alert>
+                      ) : (
+                        <Grid container spacing={2}>
+                          {filteredTables.map((t) => (
+                            <Grid size={{ xs: 6, sm: 4 }} key={t.id}>
+                              <Box 
+                                onClick={() => setSelectedTable(t)}
+                                sx={{ 
+                                  p: 2, 
+                                  textAlign: "center",
+                                  borderRadius: 2, 
+                                  border: "2px solid", 
+                                  borderColor: selectedTable?.id === t.id ? "secondary.main" : alpha("#2b2118", 0.1), 
+                                  bgcolor: selectedTable?.id === t.id ? "secondary.main" : "background.paper", 
+                                  color: selectedTable?.id === t.id ? "white" : "text.primary",
+                                  cursor: "pointer", 
+                                  transition: "all 0.2s",
+                                  boxShadow: selectedTable?.id === t.id ? 4 : 1
+                                }}>
+                                <Typography variant="h6" fontWeight={700}>{t.name}</Typography>
+                                <Typography variant="body2" sx={{ opacity: selectedTable?.id === t.id ? 1 : 0.8, mt: 0.5 }}>Capacity: {t.capacity} seats</Typography>
+                                <Typography variant="caption" sx={{ display: "block", mt: 1, opacity: selectedTable?.id === t.id ? 0.9 : 0.7 }}>
+                                  {t.diningArea?.name || "Main Area"}
+                                </Typography>
                               </Box>
-                            )}
-                          </Stack>
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                  <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6" fontWeight={600} mb={2}>Special Requests</Typography>
-                    <TextField fullWidth multiline rows={3} placeholder="Dietary requirements, celebrations, special arrangements..." value={note} onChange={(e) => setNote(e.target.value)} />
+                            </Grid>
+                          ))}
+                        </Grid>
+                      )}
+                    </>
+                  )}
+
+                  <Box sx={{ mt: 5 }}>
+                    <Typography variant="subtitle2" fontWeight={600} mb={1}>Special Requests (Optional)</Typography>
+                    <TextField fullWidth multiline rows={2} placeholder="Dietary requirements, celebrations..." value={note} onChange={(e) => setNote(e.target.value)} />
                   </Box>
                 </Box>
               )}
@@ -261,10 +392,11 @@ export default function ReservationPage() {
                     <CardContent>
                       <Stack spacing={2}>
                         {[
+                          { label: "Location", value: selectedBranchName },
                           { label: "Date", value: date },
                           { label: "Time", value: time },
                           { label: "Party Size", value: `${party} guests` },
-                          { label: "Seating", value: SEATING_AREAS.find((a) => a.id === area)?.label ?? "" },
+                          { label: "Table", value: `${selectedTable?.name} (${selectedTable?.capacity} seats)` },
                           ...(note ? [{ label: "Note", value: note }] : []),
                         ].map((row) => (
                           <Box key={row.label}>

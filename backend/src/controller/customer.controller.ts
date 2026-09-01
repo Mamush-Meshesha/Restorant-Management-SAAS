@@ -127,3 +127,30 @@ export const get_my_profile = async (req: AuthenticatedRequest, res: Response, n
     });
   } catch (error) { next(error); }
 };
+
+export const update_customer = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const orgId = req.user?.organizationId || req.user?.instituteId;
+    const { id } = req.params;
+    const { name, phone, email } = req.body;
+    let { first_name, last_name } = req.body;
+
+    if (name && !first_name) {
+      const parts = name.trim().split(' ');
+      first_name = parts[0];
+      last_name = parts.slice(1).join(' ') || undefined;
+    }
+
+    const customer = await prisma.customer.update({
+      where: { id, organization_id: orgId! },
+      data: {
+        ...(first_name && { first_name }),
+        ...(last_name !== undefined && { last_name }),
+        ...(phone && { phone }),
+        ...(email !== undefined && { email })
+      }
+    });
+
+    res.status(200).json({ message: "Customer updated successfully", data: customer });
+  } catch (error) { next(error); }
+};

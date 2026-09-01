@@ -28,3 +28,13 @@ export const getTablesApi = async () => {
   const { data } = await api.get("/table");
   return data?.data ?? [];
 };
+
+export const getAvailableTablesApi = async (params: { reservation_time: string, guest_count: number, branch_id: string, area_id?: string }) => {
+  const { data } = await api.get("/reservation/available-tables", { params });
+  return data?.data ?? [];
+};
+
+export const getTimeSlotsApi = async (params: { date: string, guest_count: number, branch_id: string }) => {
+  const { data } = await api.get("/reservation/time-slots", { params });
+  return data?.data ?? [];
+};

@@ -71,6 +71,16 @@ const generateEmailTemplate = (template: string, data: Record<string, any>): str
         <p>Best regards,<br>SM System Team</p>
       `;
     
+    case '2fa-code':
+      return `
+        <h1>Your Verification Code</h1>
+        <p>Hi ${data.username},</p>
+        <p>Your 2FA verification code is: <strong>${data.code}</strong></p>
+        <p>This code will expire in 10 minutes.</p>
+        <p>If you didn't request this, please secure your account immediately.</p>
+        <p>Best regards,<br>SM System Team</p>
+      `;
+      
     default:
       return `<p>Email content for ${template}</p>`;
   }

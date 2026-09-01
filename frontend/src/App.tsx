@@ -19,6 +19,7 @@ const Dashboard = lazy(() => import("./views/dashboard/Dashboard"));
 const POS = lazy(() => import("./views/pos/POS"));
 const KitchenDisplay = lazy(() => import("./views/kitchen/KitchenDisplay"));
 const TablesFloor = lazy(() => import("./views/tables/TablesFloor"));
+const FloorPlanEditor = lazy(() => import("./views/tables/FloorPlanEditor"));
 
 // Settings/QR
 const QRGenerator = lazy(() => import("./views/settings/QRGenerator"));
@@ -30,19 +31,34 @@ const AttendanceQRGenerator = lazy(() => import("./views/dashboard/AttendanceQRG
 
 // New Pages
 const ProfilePage = lazy(() => import("./views/profile/ProfilePage"));
+const BranchesPage = lazy(() => import("./views/settings/BranchesPage"));
+const KitchenStationsPage = lazy(() => import("./views/settings/KitchenStationsPage"));
+const RolesPage = lazy(() => import("./views/settings/RolesPage"));
+const UsersPage = lazy(() => import("./views/settings/UsersPage"));
+const SettingsPage = lazy(() => import("./views/settings/SettingsPage"));
 const AppSettingsPage = lazy(() => import("./views/settings/AppSettingsPage"));
 const BillingSubscriptionPage = lazy(() => import("./views/settings/BillingSubscriptionPage"));
 const MessagesPage = lazy(() => import("./views/messages/MessagesPage"));
 const OrdersPage = lazy(() => import("./views/orders/OrdersPage"));
 
-import {
-  ReservationsPage, DiningAreasPage, TablesPage, KitchenStationsPage, CategoriesPage, MenuItemsPage, RecipesPage,
-  CustomersPage, LoyaltyPage, InventoryPage, SuppliersPage, DeliveryPage,
-  EmployeesPage, DepartmentsPage, AttendancePage, RevenuePage, ExpensesPage,
-  TransactionsPage, BranchesPage, RolesPage, UsersPage, SettingsPage
-} from "./views/shared/PlaceholderPages";
+const ReservationsPage = lazy(() => import("./views/reservations/ReservationsPage"));
+const CategoriesPage = lazy(() => import("./views/menu/CategoriesPage"));
+const MenuItemsPage = lazy(() => import("./views/menu/MenuItemsPage"));
+const RecipesPage = lazy(() => import("./views/menu/RecipesPage"));
+const InventoryPage = lazy(() => import("./views/inventory/InventoryPage"));
+const SuppliersPage = lazy(() => import("./views/inventory/SuppliersPage"));
+const DeliveryPage = lazy(() => import("./views/delivery/DeliveryPage"));
+const EmployeesPage = lazy(() => import("./views/employees/EmployeesPage"));
+const AttendancePage = lazy(() => import("./views/employees/AttendancePage"));
+
+const CustomersPage = lazy(() => import("./views/customers/CustomersPage"));
+const LoyaltyPage = lazy(() => import("./views/customers/LoyaltyPage"));
+const TransactionsPage = lazy(() => import("./views/analytics/TransactionsPage"));
+const ExpensesPage = lazy(() => import("./views/analytics/ExpensesPage"));
+const RevenuePage = lazy(() => import("./views/analytics/RevenuePage"));
 
 import RequireRole from "./components/container/RequireRole";
+import RequirePlan from "./components/container/RequirePlan";
 import { MANAGER_ROLES, ADMIN_ROLES, ROLE_DEFAULT_PATHS } from "./config/roles";
 import type { AppRole } from "./config/roles";
 
@@ -55,7 +71,9 @@ const RootRedirect = () => {
 };
 
 function App() {
-  const { mode = "light", primaryColor = "espresso", fontSize = "medium" } = useSelector((state: RootState) => state.theme || {});
+  const mode = useSelector((state: RootState) => state.theme?.mode || "light");
+  const primaryColor = useSelector((state: RootState) => state.theme?.primaryColor || "espresso");
+  const fontSize = useSelector((state: RootState) => state.theme?.fontSize || "medium");
   const theme = useMemo(() => createAppTheme(mode, primaryColor, fontSize as any), [mode, primaryColor, fontSize]);
 
   return (
@@ -96,35 +114,41 @@ function App() {
             <Route element={<RequireRole allowedRoles={[...MANAGER_ROLES, "CHEF"]} />}>
               <Route path="/menu/categories" element={<CategoriesPage />} />
               <Route path="/menu/items" element={<MenuItemsPage />} />
-              <Route path="/menu/recipes" element={<RecipesPage />} />
+              <Route element={<RequirePlan premiumOnly />}>
+                <Route path="/menu/recipes" element={<RecipesPage />} />
+              </Route>
             </Route>
             
             {/* Shared Manager/Admin Links (Customers, Inventory, Finance, HR) */}
             <Route element={<RequireRole allowedRoles={[...MANAGER_ROLES]} />}>
-              <Route path="/customers" element={<CustomersPage />} />
-              <Route path="/loyalty" element={<LoyaltyPage />} />
-              <Route path="/inventory" element={<InventoryPage />} />
-              <Route path="/suppliers" element={<SuppliersPage />} />
+              <Route element={<RequirePlan premiumOnly />}>
+                <Route path="/customers" element={<CustomersPage />} />
+                <Route path="/loyalty" element={<LoyaltyPage />} />
+                <Route path="/inventory" element={<InventoryPage />} />
+                <Route path="/suppliers" element={<SuppliersPage />} />
+                <Route path="/analytics/expenses" element={<ExpensesPage />} />
+                <Route path="/analytics/transactions" element={<TransactionsPage />} />
+              </Route>
               <Route path="/analytics/revenue" element={<RevenuePage />} />
-              <Route path="/analytics/expenses" element={<ExpensesPage />} />
-              <Route path="/analytics/transactions" element={<TransactionsPage />} />
             </Route>
 
             {/* Delivery */}
             <Route element={<RequireRole allowedRoles={[...MANAGER_ROLES, "CASHIER"]} />}>
-              <Route path="/delivery" element={<DeliveryPage />} />
+              <Route element={<RequirePlan premiumOnly />}>
+                <Route path="/delivery" element={<DeliveryPage />} />
+              </Route>
             </Route>
             
             {/* Admin & Branch Manager */}
             <Route element={<RequireRole allowedRoles={[...ADMIN_ROLES, "BRANCH_MANAGER"]} />}>
-              <Route path="/employees" element={<EmployeesPage />} />
-              <Route path="/departments" element={<DepartmentsPage />} />
-              <Route path="/attendance" element={<AttendancePage />} />
-              <Route path="/dining-areas" element={<DiningAreasPage />} />
-              <Route path="/tables-manage" element={<TablesPage />} />
+              <Route element={<RequirePlan premiumOnly />}>
+                <Route path="/employees" element={<EmployeesPage />} />
+                <Route path="/attendance" element={<AttendancePage />} />
+                <Route path="/waitlist" element={<WaitlistDashboard />} />
+                <Route path="/attendance/qr" element={<AttendanceQRGenerator />} />
+              </Route>
+              <Route path="/floor-plan" element={<FloorPlanEditor />} />
               <Route path="/kitchen-stations" element={<KitchenStationsPage />} />
-              <Route path="/waitlist" element={<WaitlistDashboard />} />
-              <Route path="/attendance/qr" element={<AttendanceQRGenerator />} />
             </Route>
 
             {/* Admin Only */}
@@ -132,7 +156,9 @@ function App() {
               <Route path="/qr-codes" element={<QRGenerator />} />
             </Route>
             <Route element={<RequireRole allowedRoles={[...ADMIN_ROLES]} />}>
-              <Route path="/branches" element={<BranchesPage />} />
+              <Route element={<RequirePlan premiumOnly />}>
+                <Route path="/branches" element={<BranchesPage />} />
+              </Route>
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/settings" element={<SettingsPage />} />

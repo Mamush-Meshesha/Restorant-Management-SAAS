@@ -47,7 +47,9 @@ export const update_organization_profile = async (req: AuthenticatedRequest, res
         phone: updateData.phone,
         email: updateData.email,
         website: updateData.website,
-        tax_id: updateData.tax_id
+        tax_id: updateData.tax_id,
+        logo: updateData.logo
+
       }
     });
 

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/institute.middleware';
+import { SubscriptionService } from '../services/subscription.service';
 
 export const create_branch = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -9,6 +10,14 @@ export const create_branch = async (req: AuthenticatedRequest, res: Response, ne
 
     if (!orgId) {
       return res.status(400).json({ message: "Organization ID is required" });
+    }
+
+    if (req.user?.role_name !== 'SUPERADMIN') {
+      try {
+        await SubscriptionService.checkBranchLimit(orgId);
+      } catch (err: any) {
+        return res.status(403).json({ message: err.message });
+      }
     }
 
     const branch = await prisma.branch.create({

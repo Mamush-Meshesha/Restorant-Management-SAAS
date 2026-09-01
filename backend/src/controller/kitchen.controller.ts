@@ -1,15 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middleware/institute.middleware';
+import { io } from '../socket';
 
 export const get_kitchen_orders = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { branchId, stationId } = req.query;
+    const { branchId, stationId, status } = req.query;
     
-    const whereClause: any = { status: { in: ['PENDING', 'PREPARING'] } };
+    let statusFilter = ['PENDING', 'PREPARING'];
+    if (typeof status === 'string' && status.trim() !== '') {
+      statusFilter = status.split(',').map(s => s.trim());
+    }
+
+    const whereClause: any = { status: { in: statusFilter } };
     if (stationId) whereClause.station_id = String(stationId);
     
-    // In a real app we'd filter by branchId too via joins
+    const targetBranchId = req.user?.role_name !== 'SUPER_ADMIN' ? req.user?.branch_id : branchId;
+    if (targetBranchId) {
+      whereClause.orderItem = {
+        order: { branch_id: String(targetBranchId) }
+      };
+    }
+
     const orders = await prisma.kitchenOrder.findMany({
       where: whereClause,
       include: {
@@ -28,6 +40,8 @@ export const get_kitchen_orders = async (req: AuthenticatedRequest, res: Respons
   } catch (error) { next(error); }
 };
 
+import { deductInventoryForOrder } from '../services/inventory.service';
+
 export const update_kitchen_order_status = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -39,7 +53,8 @@ export const update_kitchen_order_status = async (req: AuthenticatedRequest, res
 
     const order = await prisma.kitchenOrder.update({
       where: { id },
-      data: updateData
+      data: updateData,
+      include: { orderItem: { include: { order: true } } }
     });
 
     // Automatically update the main OrderItem status too
@@ -47,6 +62,22 @@ export const update_kitchen_order_status = async (req: AuthenticatedRequest, res
       where: { id: order.order_item_id },
       data: { status }
     });
+
+    const branchId = order.orderItem?.order?.branch_id;
+    if (branchId) {
+      io.to(`branch_${branchId}`).emit("kitchen_update");
+      if (status === 'READY') {
+        io.to(`branch_${branchId}`).emit("order_update", { type: "ITEM_READY", orderId: order.orderItem?.order_id });
+      }
+    }
+
+    if (status === 'READY') {
+      try {
+        await deductInventoryForOrder(order.order_item_id);
+      } catch (err) {
+        console.error("Inventory deduction failed:", err);
+      }
+    }
 
     res.status(200).json({ message: "Status updated", data: order });
   } catch (error) { next(error); }

@@ -42,3 +42,35 @@ export const get_recipes = async (req: AuthenticatedRequest, res: Response, next
     res.status(200).json({ data: recipes });
   } catch (error) { next(error); }
 };
+
+export const update_recipe = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { menu_item_id, instructions, prep_time, cook_time, ingredients } = req.body;
+
+    const recipe = await prisma.recipe.update({
+      where: { id },
+      data: {
+        menu_item_id,
+        instructions,
+        prep_time,
+        cook_time,
+        ingredients: ingredients ? {
+          deleteMany: {},
+          create: ingredients
+        } : undefined
+      },
+      include: { ingredients: true }
+    });
+
+    res.status(200).json({ message: "Recipe updated", data: recipe });
+  } catch (error) { next(error); }
+};
+
+export const delete_recipe = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await prisma.recipe.delete({ where: { id } });
+    res.status(200).json({ message: "Recipe deleted" });
+  } catch (error) { next(error); }
+};

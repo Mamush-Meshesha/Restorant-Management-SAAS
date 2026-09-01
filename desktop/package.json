@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Restaurant Management System – Desktop POS App",
   "main": "main.js",
-  "author": "HummyFly",
+  "author": "Digital Hotel",
   "private": true,
   "scripts": {
     "dev": "concurrently -k \"npm run dev:frontend\" \"npm run dev:electron\"",

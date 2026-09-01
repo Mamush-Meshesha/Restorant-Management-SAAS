@@ -67,3 +67,53 @@ export const create_purchase_order = async (req: AuthenticatedRequest, res: Resp
     res.status(201).json({ message: "Purchase order created", data: po });
   } catch (error) { next(error); }
 };
+
+export const update_supplier = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { name, contact_person, phone, email, address, is_active } = req.body;
+
+    const supplier = await prisma.supplier.update({
+      where: { id },
+      data: { name, contact_person, phone, email, address, is_active }
+    });
+
+    res.status(200).json({ message: "Supplier updated", data: supplier });
+  } catch (error) { next(error); }
+};
+
+export const delete_supplier = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await prisma.supplier.update({
+      where: { id },
+      data: { is_active: false }
+    });
+    res.status(200).json({ message: "Supplier deactivated" });
+  } catch (error) { next(error); }
+};
+
+export const get_purchase_orders = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const orgId = req.user?.organizationId || req.user?.instituteId;
+    
+    // Find suppliers for this org
+    const suppliers = await prisma.supplier.findMany({
+      where: { organization_id: orgId },
+      select: { id: true }
+    });
+    
+    const supplierIds = suppliers.map(s => s.id);
+
+    const pos = await prisma.purchaseOrder.findMany({
+      where: { supplier_id: { in: supplierIds } },
+      include: {
+        supplier: true,
+        items: { include: { item: true } }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+
+    res.status(200).json({ data: pos });
+  } catch (error) { next(error); }
+};

@@ -73,7 +73,10 @@ export const generatePaymentQRCode = async (billId: string, amount: number) => {
 
 export const logQRScan = async (type: 'MENU' | 'PAYMENT', tokenId: string, deviceType?: string, ipAddress?: string) => {
   if (type === 'MENU') {
-    const qrCode = await prisma.menuQRCode.findUnique({ where: { token: tokenId } });
+    const qrCode = await prisma.menuQRCode.findUnique({ 
+      where: { token: tokenId },
+      include: { branch: true }
+    });
     if (qrCode) {
       await prisma.qRScanLog.create({
         data: {

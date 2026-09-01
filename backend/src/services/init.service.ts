@@ -7,13 +7,13 @@ const initializeSystem = async () => {
 
     // 1. Create Default Organization
     let defaultOrg = await prisma.organization.findFirst({
-      where: { name: 'Default Restaurant Group' }
+      where: { name: 'Digital Hotel HQ' }
     });
 
     if (!defaultOrg) {
       defaultOrg = await prisma.organization.create({
         data: {
-          name: 'Default Restaurant Group',
+          name: 'Digital Hotel HQ',
           email: 'admin@restaurant.com',
           phone: '+1234567890',
         }

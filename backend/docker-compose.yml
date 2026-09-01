@@ -2,29 +2,33 @@ version: '3.8'
 
 services:
   backend:
-    build: .
-    container_name: hummyfly-backend
+    build:
+      context: .
+      target: builder
+    container_name: digital_hotel-backend
+    command: sh -c "npm install && npm run dev"
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
       - PORT=3000
       # Using a local dockerized DB for local testing
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/hummyfly?schema=public
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/digital_hotel?schema=public
     depends_on:
       - db
     volumes:
       - ./src:/app/src
+      - ./dist:/app/dist
       - ./prisma:/app/prisma
       - ./.env:/app/.env
 
   db:
     image: postgres:15-alpine
-    container_name: hummyfly-db
+    container_name: digital_hotel-db
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=hummyfly
+      - POSTGRES_DB=digital_hotel
     ports:
       - "5432:5432"
     volumes:

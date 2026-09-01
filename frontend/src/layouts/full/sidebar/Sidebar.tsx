@@ -26,22 +26,6 @@ const MSidebar = ({
   const lgUp = useMediaQuery((theme: any) => theme.breakpoints.up("lg"));
   const sidebarCompact = useSelector((state: RootState) => state.theme?.sidebarCompact ?? false);
   const sidebarWidth = lgUp && sidebarCompact ? "85px" : "280px";
-  // Enhanced scrollbar styles
-  const scrollbarStyles = {
-    "&::-webkit-scrollbar": {
-      width: "6px",
-    },
-    "&::-webkit-scrollbar-track": {
-      background: "transparent",
-    },
-    "&::-webkit-scrollbar-thumb": {
-      backgroundColor: alpha("#5D87FF", 0.3),
-      borderRadius: "8px",
-      "&:hover": {
-        backgroundColor: alpha("#5D87FF", 0.5),
-      },
-    },
-  };
 
   const LogoSection = styled(Box)(({ theme }) => ({
     height: "80px",
@@ -85,7 +69,6 @@ const MSidebar = ({
               borderRight: (theme) => `1px solid ${theme.palette.divider}`,
               bgcolor: "background.paper",
               boxShadow: "none",
-              ...scrollbarStyles,
             },
           }}
           ModalProps={{
@@ -162,7 +145,15 @@ const MSidebar = ({
             </LogoSection>
 
             {/* Navigation Items */}
-            <Box sx={{ flex: 1, overflowY: "auto", py: 2 }}>
+            <Box 
+              sx={{ 
+                flex: 1, 
+                overflowY: "auto", 
+                py: 2, 
+                overscrollBehaviorY: "none",
+                WebkitOverflowScrolling: "touch"
+              }}
+            >
               <SidebarItems />
             </Box>
 
@@ -214,7 +205,6 @@ const MSidebar = ({
           borderRight: (theme) => `1px solid ${theme.palette.divider}`,
           bgcolor: "background.paper",
           boxShadow: (theme) => theme.shadows[8],
-          ...scrollbarStyles,
         },
       }}
       ModalProps={{
@@ -287,7 +277,15 @@ const MSidebar = ({
         </LogoSection>
 
         {/* Navigation Items */}
-        <Box sx={{ flex: 1, overflowY: "auto", py: 2 }}>
+        <Box 
+          sx={{ 
+            flex: 1, 
+            overflowY: "auto", 
+            py: 2,
+            overscrollBehaviorY: "none",
+            WebkitOverflowScrolling: "touch"
+          }}
+        >
           <SidebarItems />
         </Box>
 

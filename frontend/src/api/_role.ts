@@ -39,11 +39,13 @@ export interface DeleteRoleResponse {
 export interface CreateRoleData {
   name: string;
   description?: string;
+  permissions?: any[];
 }
 
 export interface UpdateRoleData {
   name?: string;
   description?: string;
+  permissions?: any[];
 }
 
 export interface RoleFilterParams {

@@ -224,7 +224,12 @@ const SidebarItems = () => {
   const roleName = useSelector((state: RootState) => state.auth.currentUser?.role?.name) as AppRole | undefined;
   const sidebarCompact = useSelector((state: RootState) => state.theme?.sidebarCompact ?? false);
   const subscription = useSelector((state: RootState) => state.auth.subscription);
-  const isFreePlan = subscription?.plan?.name === "Free" || !subscription;
+  
+  // A plan is considered "free/restricted" if it's named free, costs 0, or the subscription is inactive/canceled
+  const isFreePlan = !subscription || 
+    subscription.status === 'CANCELED' || 
+    subscription.plan?.price === 0 || 
+    subscription.plan?.name?.toLowerCase().includes("free");
 
   // Filter groups based on role
   const filteredGroups = Menuitems.filter((group) => {

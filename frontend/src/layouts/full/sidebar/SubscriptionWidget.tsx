@@ -3,15 +3,22 @@ import { IconCrown } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getBillingSubscription } from "../../../api/_billing";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../redux/store";
 
 export default function SubscriptionWidget({ compact }: { compact: boolean }) {
   const theme = useTheme();
   const navigate = useNavigate();
+  const authSub = useSelector((state: RootState) => state.auth.subscription);
   const [sub, setSub] = useState<any>(null);
 
   useEffect(() => {
-    getBillingSubscription().then(res => setSub(res.data.data)).catch(() => {});
-  }, []);
+    if (authSub) {
+      setSub(authSub);
+    } else {
+      getBillingSubscription().then(res => setSub(res.data.data)).catch(() => {});
+    }
+  }, [authSub]);
 
   if (!sub) return null; // Don't render if no sub data
 

@@ -22,9 +22,9 @@ export const get_subscription_status = async (req: AuthenticatedRequest, res: Re
           data: {
             organization_id: orgId,
             plan_id: freePlan.id,
-            status: "ACTIVE",
+            status: "TRIAL",
             start_date: new Date(),
-            end_date: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+            end_date: new Date(new Date().setDate(new Date().getDate() + 14)), // 14-day trial
             is_auto_renew: false,
             usage: { create: {} }
           },
@@ -70,9 +70,7 @@ export const upgrade_subscription = async (req: AuthenticatedRequest, res: Respo
     if (!newPlan) return res.status(404).json({ message: "Plan not found" });
 
     let subscription = await prisma.subscription.findUnique({ where: { organization_id: orgId } });
-    if (!subscription) return res.status(404).json({ message: "No active subscription found" });
-
-    const oldPlanId = subscription.plan_id;
+    const oldPlanId = subscription?.plan_id;
     const cycle = billing_cycle || newPlan.billing_cycle;
 
     let endDate: Date | null = null;
@@ -83,16 +81,31 @@ export const upgrade_subscription = async (req: AuthenticatedRequest, res: Respo
     }
     // LIFETIME has no end date (null)
 
-    subscription = await prisma.subscription.update({
-      where: { id: subscription.id },
-      data: {
-        plan_id: newPlan.id,
-        status: newPlan.name === "Lifetime" ? "LIFETIME" : "ACTIVE",
-        start_date: new Date(),
-        end_date: endDate,
-        is_auto_renew: cycle !== 'LIFETIME'
-      }
-    });
+    if (!subscription) {
+      // Create new subscription if none exists
+      subscription = await prisma.subscription.create({
+        data: {
+          organization_id: orgId,
+          plan_id: newPlan.id,
+          status: newPlan.name === "Lifetime" ? "LIFETIME" : "ACTIVE",
+          start_date: new Date(),
+          end_date: endDate,
+          is_auto_renew: cycle !== 'LIFETIME',
+          usage: { create: {} }
+        }
+      });
+    } else {
+      subscription = await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          plan_id: newPlan.id,
+          status: newPlan.name === "Lifetime" ? "LIFETIME" : "ACTIVE",
+          start_date: new Date(),
+          end_date: endDate,
+          is_auto_renew: cycle !== 'LIFETIME'
+        }
+      });
+    }
 
     await prisma.subscriptionHistory.create({
       data: {
@@ -317,5 +330,69 @@ export const download_invoice_pdf = async (req: AuthenticatedRequest, res: Respo
        });
 
     doc.end();
+  } catch (error) { next(error); }
+};
+
+// ─── SUPERADMIN PLAN MANAGEMENT ───────────────────────────────────────────────
+export const create_plan = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name, description, billing_cycle, price, max_branches, max_users, max_storage_mb, features } = req.body;
+    if (!name || !billing_cycle || price === undefined) {
+      return res.status(400).json({ message: "Name, billing_cycle, and price are required" });
+    }
+
+    const plan = await prisma.subscriptionPlan.create({
+      data: {
+        name,
+        description,
+        billing_cycle,
+        price: parseFloat(price.toString()),
+        max_branches: parseInt(max_branches?.toString() || "1"),
+        max_users: parseInt(max_users?.toString() || "5"),
+        max_storage_mb: parseInt(max_storage_mb?.toString() || "1024"),
+        features: features || [],
+        is_active: true
+      }
+    });
+
+    res.status(201).json({ message: "Plan created successfully", data: plan });
+  } catch (error) { next(error); }
+};
+
+export const update_plan = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { name, description, billing_cycle, price, max_branches, max_users, max_storage_mb, features } = req.body;
+
+    const dataToUpdate: any = {};
+    if (name !== undefined) dataToUpdate.name = name;
+    if (description !== undefined) dataToUpdate.description = description;
+    if (billing_cycle !== undefined) dataToUpdate.billing_cycle = billing_cycle;
+    if (price !== undefined) dataToUpdate.price = parseFloat(price.toString());
+    if (max_branches !== undefined) dataToUpdate.max_branches = parseInt(max_branches.toString());
+    if (max_users !== undefined) dataToUpdate.max_users = parseInt(max_users.toString());
+    if (max_storage_mb !== undefined) dataToUpdate.max_storage_mb = parseInt(max_storage_mb.toString());
+    if (features !== undefined) dataToUpdate.features = features;
+
+    const plan = await prisma.subscriptionPlan.update({
+      where: { id },
+      data: dataToUpdate
+    });
+
+    res.status(200).json({ message: "Plan updated successfully", data: plan });
+  } catch (error) { next(error); }
+};
+
+export const delete_plan = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    
+    // Soft delete so existing subscriptions don't break
+    await prisma.subscriptionPlan.update({
+      where: { id },
+      data: { is_active: false }
+    });
+
+    res.status(200).json({ message: "Plan deleted (deactivated) successfully" });
   } catch (error) { next(error); }
 };

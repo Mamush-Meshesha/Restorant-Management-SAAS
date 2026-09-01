@@ -7,8 +7,6 @@ import { getOrders, cancelOrder } from "@/api/_orders";
 import { getUsers, createUser, updateUser, deleteUser } from "@/api/_users";
 import { getBranches, createBranch, updateBranch } from "@/api/_branches";
 import { getAllRoles, createRole, updateRole, deleteRole } from "@/api/_role";
-import { getRevenueReport } from "@/api/_analytics";
-import { getCustomers, createCustomer } from "@/api/_customer";
 import { getReservations, createReservation, updateReservationStatus } from "@/api/_reservations";
 import { getKitchenStations, createKitchenStation, updateKitchenStation, deleteKitchenStation } from "@/api/_kitchenStations";
 import { getDiningAreas, createDiningArea, updateDiningArea, deleteDiningArea, getTables, createTable, updateTable, deleteTable } from "@/api/_tables";
@@ -52,9 +50,9 @@ export const OrdersPage = () => {
           { field: "order_number", headerName: "Order #", width: 140 },
           { field: "order_type", headerName: "Type", width: 120 },
           { field: "table_name", headerName: "Table", width: 120,
-            valueGetter: (value: any, row: any) => row?.table?.name || "Takeaway" },
+            valueGetter: (_: any, row: any) => row?.table?.name || "Takeaway" },
           { field: "items_count", headerName: "Items", width: 80,
-            valueGetter: (value: any, row: any) => (row?.items?.length ?? 0) },
+            valueGetter: (_: any, row: any) => (row?.items?.length ?? 0) },
           { field: "total_amount", headerName: "Total", width: 120,
             valueFormatter: (value: any) => `$${Number(value || 0).toFixed(2)}` },
           { field: "status", headerName: "Status", width: 140, renderCell: renderStatusPill },

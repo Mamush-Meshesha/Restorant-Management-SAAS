@@ -8,7 +8,6 @@ import GlobalSubscriptionBanner from "../../components/widgets/GlobalSubscriptio
 import { useEffect, Suspense } from "react";
 import { getBillingSubscription } from "../../api/_billing";
 import { useAppDispatch, useAppSelector } from "../../hooks/auth";
-import { motion, AnimatePresence } from "framer-motion";
 import { setSubscription } from "../../redux/slices/authSlice";
 
 const MainWrapper = styled("div")(({ theme }) => ({

@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Box, Card, CardContent, Typography, Stack, Button, useTheme, alpha,
-  Grid, Switch, TextField, InputAdornment, Avatar, Divider, Chip,
+  Grid, Switch, TextField, InputAdornment, Divider, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions, IconButton
 } from "@mui/material";
 import {
   IconTrophy, IconStar, IconSettings, IconHistory, IconGift,
-  IconCoins, IconPercentage, IconCheck, IconTrash
+  IconCoins, IconCheck, IconTrash
 } from "@tabler/icons-react";
 import { DataGrid } from "@mui/x-data-grid";
 import type { GridColDef } from "@mui/x-data-grid";
@@ -157,7 +157,7 @@ export default function LoyaltyPage() {
         <Grid container spacing={4}>
           
           {/* Settings Column */}
-          <Grid item xs={12} lg={4}>
+          <Grid size={{ xs: 12, lg: 4 }} >
             <Stack spacing={4}>
               
               {/* Core Settings */}
@@ -249,7 +249,7 @@ export default function LoyaltyPage() {
           </Grid>
 
           {/* Transactions Column */}
-          <Grid item xs={12} lg={8}>
+          <Grid size={{ xs: 12, lg: 8 }} >
             <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[2], border: `1px solid ${theme.palette.divider}`, height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box p={3} borderBottom={`1px solid ${theme.palette.divider}`} display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h6" fontWeight={700} display="flex" alignItems="center" gap={1}>

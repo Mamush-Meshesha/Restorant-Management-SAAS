@@ -1,17 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Box, Container, Typography, Grid, Stack, Button, alpha, Card, CardContent,
-  Avatar, Tabs, Tab, Chip, LinearProgress, CardMedia, IconButton, CircularProgress,
+  Avatar, Tabs, Tab, Chip, LinearProgress, CircularProgress,
   Stepper, Step, StepLabel
 } from "@mui/material";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { 
   IconUser, IconReceipt, IconStar, IconMedal, IconHeart, IconBell, 
-  IconMapPin, IconHeartFilled, IconCoffee, IconDiamond
+  IconCoffee, IconDiamond
 } from "@tabler/icons-react";
-import { Link, useLocation } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from "../../redux/hooks";
-import { toggleFavoriteItem, toggleFavoriteLocation } from "../../redux/slices/userSlice";
+import { useLocation } from "react-router-dom";
+import { useAppSelector } from "../../redux/hooks";
 import { getOrdersApi } from "../../api/orders";
 import { getReservationsApi } from "../../api/reservations";
 import { getMenuItemsApi } from "../../api/menu";
@@ -24,16 +23,13 @@ import { toast } from "react-toastify";
 const ORDER_STEPS = ["PENDING", "PREPARING", "READY", "DELIVERING", "COMPLETED"];
 
 export default function AccountPage() {
-  const dispatch = useAppDispatch();
-  const { favoriteItems, favoriteLocations, profile: userProfile } = useAppSelector(state => state.user);
+    const { favoriteItems, favoriteLocations, profile: userProfile } = useAppSelector(state => state.user);
 
   const location = useLocation();
   const [tab, setTab] = useState(location.state?.tab || 0);
   const [orders, setOrders] = useState<any[]>([]);
   const [reservations, setReservations] = useState<any[]>([]);
-  const [menuItems, setMenuItems] = useState<any[]>([]);
-  const [locations, setLocations] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+      const [notifications, setNotifications] = useState<Notification[]>([]);
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [plans, setPlans] = useState<any[]>([]);
   const [mySubscriptions, setMySubscriptions] = useState<any[]>([]);
@@ -43,13 +39,12 @@ export default function AccountPage() {
     const fetchBaseData = async () => {
       setLoading(true);
       try {
-        const [mData, lData, pData] = await Promise.all([
+        const [, , pData] = await Promise.all([
           getMenuItemsApi().catch(() => []),
           getBranchesApi().catch(() => []),
           getMyProfileApi().catch(() => null),
         ]);
-        setMenuItems(mData);
-        setLocations(lData);
+
         setProfile(pData);
       } catch (err) {
         console.error(err);
@@ -403,11 +398,11 @@ export default function AccountPage() {
                 <Typography variant="h5" fontWeight={700} mb={3}>Recent Points Activity</Typography>
                 <Card>
                   <CardContent sx={{ p: 0 }}>
-                    {(!profile?.loyaltyHistory || profile.loyaltyHistory.length === 0) ? (
+                    {(!(profile as any)?.loyaltyHistory || (profile as any).loyaltyHistory.length === 0) ? (
                       <Typography color="text.secondary" p={4} textAlign="center">No point activity yet.</Typography>
                     ) : (
                       <Stack divider={<Box sx={{ borderBottom: "1px solid", borderColor: "divider" }} />}>
-                        {profile.loyaltyHistory.map((tx: any) => (
+                        {(profile as any).loyaltyHistory.map((tx: any) => (
                           <Box key={tx.id} sx={{ p: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Box>
                               <Typography fontWeight={600}>{tx.transaction_type}</Typography>

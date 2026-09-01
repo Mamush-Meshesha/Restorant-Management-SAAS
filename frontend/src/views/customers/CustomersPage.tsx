@@ -225,7 +225,7 @@ export default function CustomersPage() {
         {/* KPIs */}
         <Grid container spacing={3} mb={4}>
           {kpis.map((kpi, idx) => (
-            <Grid item xs={12} sm={4} key={idx}>
+            <Grid size={{ xs: 12, sm: 4 }} key={idx}>
               <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[1], border: `1px solid ${theme.palette.divider}` }}>
                 <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Avatar sx={{ bgcolor: kpi.bg, color: kpi.color, width: 56, height: 56, borderRadius: 2 }}>
@@ -347,19 +347,19 @@ export default function CustomersPage() {
               </Box>
               
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }} >
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>PHONE NUMBER</Typography>
                   <Typography variant="body1" display="flex" alignItems="center" gap={1}>
                     <IconPhone size={16} /> {selectedCustomer.phone || "N/A"}
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }} >
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>EMAIL ADDRESS</Typography>
                   <Typography variant="body1" display="flex" alignItems="center" gap={1}>
                     <IconMail size={16} /> {selectedCustomer.email || "N/A"}
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }} >
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>LOYALTY POINTS</Typography>
                   <Typography variant="body1" display="flex" alignItems="center" gap={1}>
                     <IconStar size={16} color={theme.palette.warning.main} /> {selectedCustomer.loyalty_points || 0} pts
@@ -413,7 +413,7 @@ export default function CustomersPage() {
   );
 }
 
-const CustomerActionMenu = ({ customer, onView, onEdit }: { customer: any, onView: () => void, onEdit: () => void }) => {
+const CustomerActionMenu = ({ onView, onEdit }: { customer?: any, onView: () => void, onEdit: () => void }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 

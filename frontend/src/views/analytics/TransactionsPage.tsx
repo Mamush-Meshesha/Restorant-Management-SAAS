@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Box, Card, CardContent, Typography, Stack, Button, useTheme,
   TextField, MenuItem, alpha, Drawer, IconButton, Divider,
@@ -45,7 +45,7 @@ export default function TransactionsPage() {
       const res = await getOrders({ limit: 1000 });
       const data = res.data.data || [];
       const validTx = data.filter(o => 
-        o.status === "CLOSED" || o.status === "SERVED" || o.status === "COMPLETED" || (o.bills && o.bills.length > 0 && o.bills[0].status === "PAID")
+        o.status === "CLOSED" || o.status === "SERVED" || (o.status as any) === "COMPLETED" || ((o as any).bills && (o as any).bills.length > 0 && (o as any).bills[0].status === "PAID")
       );
       setOrders(validTx);
     } catch (err) {
@@ -279,7 +279,7 @@ export default function TransactionsPage() {
 
       {/* KPI Cards */}
       <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ bgcolor: alpha(theme.palette.success.main, 0.05), border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`, boxShadow: "none" }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2}>
@@ -294,7 +294,7 @@ export default function TransactionsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, boxShadow: "none" }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2}>
@@ -309,7 +309,7 @@ export default function TransactionsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ bgcolor: alpha(theme.palette.warning.main, 0.05), border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`, boxShadow: "none" }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2}>

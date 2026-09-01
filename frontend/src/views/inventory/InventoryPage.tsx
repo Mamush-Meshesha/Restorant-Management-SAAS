@@ -32,8 +32,8 @@ export default function InventoryPage() {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
   // Forms
-  const [createForm, setCreateForm] = useState<Partial<InventoryItem>>({
-    name: "", category: "VEG", unit: "kg", minimum_stock: 0, cost_per_unit: 0
+  const [createForm, setCreateForm] = useState<any>({
+    name: "", category: "VEG" as any as any, unit: "kg", minimum_stock: 0, cost_per_unit: 0
   });
   const [adjustForm, setAdjustForm] = useState({ quantity: 0, type: "ADD" as "ADD" | "DEDUCT", reason: "Stock Count" });
   const [wasteForm, setWasteForm] = useState({ quantity: 0, reason: "Spoiled" });
@@ -56,7 +56,7 @@ export default function InventoryPage() {
   const lowStockItems = useMemo(() => items.filter(i => i.current_stock <= i.minimum_stock), [items]);
 
   const handleCreate = async () => {
-    if (!createForm.name || !createForm.unit || !createForm.category) return toast.error("Missing required fields");
+    if (!createForm.name || !createForm.unit || !(createForm as any).category) return toast.error("Missing required fields");
     try {
       await addInventoryItem(createForm);
       toast.success("Item created");
@@ -231,7 +231,7 @@ export default function InventoryPage() {
           <Stack spacing={3}>
             <TextField label="Item Name" fullWidth value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })} />
             <Stack direction="row" spacing={2}>
-              <TextField label="Category (e.g. MEAT, VEG, DAIRY)" fullWidth value={createForm.category} onChange={e => setCreateForm({ ...createForm, category: e.target.value })} />
+              <TextField label="Category (e.g. MEAT, VEG, DAIRY)" fullWidth value={(createForm as any).category} onChange={e => setCreateForm({ ...createForm, category: e.target.value as any as any })} />
               <TextField label="Unit (e.g. kg, ml, pcs)" fullWidth value={createForm.unit} onChange={e => setCreateForm({ ...createForm, unit: e.target.value })} />
             </Stack>
             <Stack direction="row" spacing={2}>

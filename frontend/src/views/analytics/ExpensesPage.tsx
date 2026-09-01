@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Box, Card, CardContent, Typography, Stack, Button, useTheme,
   TextField, MenuItem, alpha, Dialog, DialogTitle, DialogContent, DialogActions,
   Grid, Avatar, InputAdornment
 } from "@mui/material";
 import {
-  IconReportMoney, IconReceipt, IconChartBar, IconSearch,
+  IconReceipt, IconChartBar, IconSearch,
   IconPlus, IconWallet
 } from "@tabler/icons-react";
 import { DataGrid } from "@mui/x-data-grid";
@@ -194,7 +194,7 @@ export default function ExpensesPage() {
 
       {/* KPI Cards */}
       <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ bgcolor: alpha(theme.palette.error.main, 0.05), border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`, boxShadow: "none" }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2}>
@@ -209,7 +209,7 @@ export default function ExpensesPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, boxShadow: "none" }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2}>
@@ -224,7 +224,7 @@ export default function ExpensesPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ bgcolor: alpha(theme.palette.warning.main, 0.05), border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`, boxShadow: "none" }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2}>
@@ -301,7 +301,7 @@ export default function ExpensesPage() {
         <DialogContent dividers>
           <Stack spacing={3} mt={1}>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }} >
                 <TextField
                   fullWidth
                   label="Amount"
@@ -312,7 +312,7 @@ export default function ExpensesPage() {
                   InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }} >
                 <TextField
                   fullWidth
                   label="Date"

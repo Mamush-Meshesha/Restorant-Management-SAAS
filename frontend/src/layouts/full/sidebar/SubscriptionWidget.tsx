@@ -1,5 +1,5 @@
 import { Box, Typography, alpha, useTheme, LinearProgress, Stack, Tooltip } from "@mui/material";
-import { IconCrown, IconAlertTriangle, IconAlertCircle } from "@tabler/icons-react";
+import { IconCrown } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getBillingSubscription } from "../../../api/_billing";
@@ -22,22 +22,22 @@ export default function SubscriptionWidget({ compact }: { compact: boolean }) {
   // Intelligent styling based on days remaining
   let statusColor = theme.palette.success.main;
   let gradient = `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)} 0%, ${alpha(theme.palette.success.light, 0.05)} 100%)`;
-  let alertIcon = null;
+  
   let statusText = sub.status === 'CANCELED' ? 'Canceled' : "Active";
 
   if (sub.status === 'CANCELED') {
     statusColor = theme.palette.error.main;
     gradient = `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.1)} 0%, ${alpha(theme.palette.error.light, 0.05)} 100%)`;
-    alertIcon = <IconAlertCircle size={16} />;
+    
   } else if (daysRemaining <= 0) {
     statusColor = theme.palette.error.main;
     gradient = `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.1)} 0%, ${alpha(theme.palette.error.light, 0.05)} 100%)`;
-    alertIcon = <IconAlertCircle size={16} />;
+    
     statusText = "Expired";
   } else if (daysRemaining <= 14) {
     statusColor = theme.palette.warning.main;
     gradient = `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)} 0%, ${alpha(theme.palette.warning.light, 0.05)} 100%)`;
-    alertIcon = <IconAlertTriangle size={16} />;
+    
     statusText = "Expiring Soon";
   }
 
@@ -54,12 +54,12 @@ export default function SubscriptionWidget({ compact }: { compact: boolean }) {
             mb: 1,
             mx: 1,
             borderRadius: 2,
-            bgcolor: statusBg,
+            bgcolor: alpha(statusColor, 0.1),
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             border: `1px solid ${alpha(statusColor, 0.2)}`,
-            "&:hover": { bgcolor: alpha(statusBg, 0.8) }
+            "&:hover": { bgcolor: alpha(alpha(statusColor, 0.1), 0.8) }
           }}
         >
           <IconCrown size={24} color={statusColor} />

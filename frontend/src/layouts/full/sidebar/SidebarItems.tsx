@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import {
   Box, List, ListItemButton, ListItemIcon, ListItemText,
-  Collapse, useTheme, alpha, Typography, Badge
+  Collapse, useTheme, alpha, 
 } from "@mui/material";
-import { IconChevronDown, IconChevronRight, IconLock } from "@tabler/icons-react";
+import { IconChevronDown, IconLock } from "@tabler/icons-react";
 import { useLocation, useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../redux/store";

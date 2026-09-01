@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Box, Card, Typography, Stack, Divider, Avatar,
   TextField, InputAdornment, IconButton, Chip, List,
   ListItemAvatar, ListItemText, ListItemButton, Badge, alpha,
-  Paper, Button, Tooltip, CircularProgress, Dialog, DialogTitle, DialogContent, ListItem,
+  Paper, Button, Tooltip, CircularProgress, Dialog, DialogTitle, DialogContent,
   Menu, MenuItem, Popover, Grid, ListItemIcon
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -623,7 +623,7 @@ const MessagesPage = () => {
                   <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700, color: "text.secondary" }}>Common Emojis</Typography>
                   <Grid container spacing={1}>
                     {COMMON_EMOJIS.map(emoji => (
-                      <Grid item xs={2} key={emoji} sx={{ display: "flex", justifyContent: "center" }}>
+                      <Grid size={{ xs: 2 }} key={emoji} sx={{ display: "flex", justifyContent: "center" }}>
                         <IconButton
                           size="small"
                           onClick={() => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Box, Card, CardContent, Typography, Stack, Button, useTheme,
   TextField, MenuItem, alpha, Drawer, IconButton, Divider,
@@ -6,7 +6,7 @@ import {
 } from "@mui/material";
 import {
   IconCalendarEvent, IconUsers, IconCheck, IconX,
-  IconSearch, IconUser, IconPhone, IconArmchair, IconTrash
+  IconSearch, IconPhone, IconArmchair, IconTrash
 } from "@tabler/icons-react";
 import { DataGrid } from "@mui/x-data-grid";
 import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
@@ -236,7 +236,7 @@ export default function ReservationsPage() {
 
       {/* KPI Cards */}
       <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, boxShadow: "none" }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2}>
@@ -251,7 +251,7 @@ export default function ReservationsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ bgcolor: alpha(theme.palette.info.main, 0.05), border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`, boxShadow: "none" }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2}>
@@ -266,7 +266,7 @@ export default function ReservationsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ bgcolor: alpha(theme.palette.warning.main, 0.05), border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`, boxShadow: "none" }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={2}>
@@ -405,27 +405,27 @@ export default function ReservationsPage() {
               <Typography variant="h6" fontWeight={700} mb={2}>Actions</Typography>
               <Grid container spacing={2}>
                 {selectedRes.status === 'PENDING' && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }} >
                     <Button variant="contained" color="success" fullWidth startIcon={<IconCheck size={18} />} onClick={() => handleStatusChange(selectedRes.id, 'CONFIRMED')} sx={{ py: 1.5 }}>
                       Confirm Booking
                     </Button>
                   </Grid>
                 )}
                 {selectedRes.status === 'CONFIRMED' && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }} >
                     <Button variant="contained" color="info" fullWidth startIcon={<IconArmchair size={18} />} onClick={() => handleStatusChange(selectedRes.id, 'SEATED')} sx={{ py: 1.5 }}>
                       Seat Guests
                     </Button>
                   </Grid>
                 )}
                 {selectedRes.status !== 'CANCELLED' && selectedRes.status !== 'SEATED' && (
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }} >
                     <Button variant="outlined" color="error" fullWidth onClick={() => handleStatusChange(selectedRes.id, 'CANCELLED')} sx={{ py: 1.5 }}>
                       Cancel
                     </Button>
                   </Grid>
                 )}
-                <Grid item xs={selectedRes.status === 'CANCELLED' || selectedRes.status === 'SEATED' ? 12 : 6}>
+                <Grid size={{ xs: selectedRes.status === 'CANCELLED' || selectedRes.status === 'SEATED' ? 12 : 6 }}>
                   <Button variant="outlined" color="error" fullWidth onClick={() => handleDelete(selectedRes.id)} startIcon={<IconTrash size={18} />} sx={{ py: 1.5 }}>
                     Delete
                   </Button>
@@ -443,10 +443,10 @@ export default function ReservationsPage() {
             <TextField label="Customer Name" fullWidth value={formData.customer_name} onChange={e => setFormData({...formData, customer_name: e.target.value})} />
             <TextField label="Phone Number" fullWidth value={formData.customer_phone} onChange={e => setFormData({...formData, customer_phone: e.target.value})} />
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }} >
                 <TextField label="Date & Time" type="datetime-local" fullWidth value={formData.reservation_time} onChange={e => setFormData({...formData, reservation_time: e.target.value})} InputLabelProps={{ shrink: true }} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={{ xs: 6 }} >
                 <TextField label="Guest Count" type="number" fullWidth value={formData.guest_count} onChange={e => setFormData({...formData, guest_count: parseInt(e.target.value)})} />
               </Grid>
             </Grid>

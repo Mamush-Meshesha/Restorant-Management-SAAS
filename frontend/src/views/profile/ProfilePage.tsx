@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Box, Card, CardContent, Typography, Avatar, Grid, TextField,
   Button, Stack, Chip, Divider, Alert, CircularProgress, alpha,
@@ -233,7 +233,7 @@ const ProfilePage = () => {
         <Grid container spacing={4}>
           
           {/* Left Column: Stats & Info */}
-          <Grid item xs={12} lg={4}>
+          <Grid size={{ xs: 12, lg: 4 }} >
             <Stack spacing={4}>
               
               <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[2], border: `1px solid ${theme.palette.divider}` }}>
@@ -285,7 +285,7 @@ const ProfilePage = () => {
           </Grid>
 
           {/* Right Column: Edit Forms */}
-          <Grid item xs={12} lg={8}>
+          <Grid size={{ xs: 12, lg: 8 }} >
             <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[2], border: `1px solid ${theme.palette.divider}` }}>
               
               <Tabs
@@ -321,7 +321,7 @@ const ProfilePage = () => {
                       </Box>
                       
                       <Grid container spacing={3}>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }} >
                           <Typography variant="subtitle2" fontWeight={600} mb={1}>First Name</Typography>
                           <TextField
                             fullWidth
@@ -332,7 +332,7 @@ const ProfilePage = () => {
                             sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                           />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }} >
                           <Typography variant="subtitle2" fontWeight={600} mb={1}>Last Name</Typography>
                           <TextField
                             fullWidth
@@ -343,7 +343,7 @@ const ProfilePage = () => {
                             sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                           />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }} >
                           <Typography variant="subtitle2" fontWeight={600} mb={1}>Email Address</Typography>
                           <TextField
                             fullWidth
@@ -355,7 +355,7 @@ const ProfilePage = () => {
                             sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                           />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }} >
                           <Typography variant="subtitle2" fontWeight={600} mb={1}>Username</Typography>
                           <TextField
                             fullWidth
@@ -366,7 +366,7 @@ const ProfilePage = () => {
                             sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                           />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }} >
                           <Typography variant="subtitle2" fontWeight={600} mb={1}>Phone Number (Optional)</Typography>
                           <TextField
                             fullWidth
@@ -377,7 +377,7 @@ const ProfilePage = () => {
                             sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                           />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }} >
                           <Typography variant="subtitle2" fontWeight={600} mb={1}>Location (Optional)</Typography>
                           <TextField
                             fullWidth

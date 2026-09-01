@@ -32,7 +32,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import PageContainer from "../../components/container/PageContainer";
 import { getLiveDashboard } from "@/api/_analytics";
 import { useAppSelector } from "@/hooks/auth";
-import { useSmartPolling } from "@/hooks/useSmartPolling";
 
 // ─── Motion helpers ───────────────────────────────────────────────────────────
 const fadeUp = {

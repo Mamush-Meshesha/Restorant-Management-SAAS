@@ -72,7 +72,7 @@ export default function MenuViewer() {
               
               <Grid container spacing={3}>
                 {category.items?.map((item: any) => (
-                  <Grid item xs={12} md={6} key={item.id}>
+                  <Grid size={{ xs: 12, md: 6 }} key={item.id}>
                     <Card sx={{ 
                       borderRadius: 3, 
                       boxShadow: '0 4px 20px rgba(0,0,0,0.05)',

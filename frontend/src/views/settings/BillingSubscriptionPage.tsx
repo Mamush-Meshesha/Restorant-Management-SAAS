@@ -232,15 +232,15 @@ export default function BillingSubscriptionPage() {
           <Typography variant="h5" fontWeight={800} mb={3}>Available Plans</Typography>
           <Grid container spacing={3}>
             {plans.map((p) => (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={p.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={(p as any).id}>
                 <Card 
                   sx={{ 
                     height: "100%", 
-                    border: p.id === plan.id ? `2px solid ${theme.palette.primary.main}` : undefined,
+                    border: (p as any).id === (plan as any).id ? `2px solid ${theme.palette.primary.main}` : undefined,
                     position: "relative"
                   }}
                 >
-                  {p.id === plan.id && (
+                  {(p as any).id === (plan as any).id && (
                     <Box sx={{ position: "absolute", top: 12, right: 12 }}>
                       <Chip label="CURRENT" size="small" color="primary" />
                     </Box>
@@ -260,12 +260,12 @@ export default function BillingSubscriptionPage() {
                     </Box>
 
                     <Button 
-                      variant={p.id === plan.id ? "outlined" : "contained"} 
+                      variant={(p as any).id === (plan as any).id ? "outlined" : "contained"} 
                       fullWidth 
-                      disabled={p.id === plan.id}
+                      disabled={(p as any).id === (plan as any).id}
                       onClick={() => { setSelectedPlan(p); setUpgradeDialogOpen(true); }}
                     >
-                      {p.id === plan.id ? "Current Plan" : "Upgrade"}
+                      {(p as any).id === (plan as any).id ? "Current Plan" : "Upgrade"}
                     </Button>
                   </CardContent>
                 </Card>

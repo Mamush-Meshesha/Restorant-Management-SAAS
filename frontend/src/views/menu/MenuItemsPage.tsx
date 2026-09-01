@@ -254,7 +254,7 @@ export default function MenuItemsPage() {
                     Item Image
                   </Typography>
                   <ImageUpload
-                    value={formData.image_url}
+                    value={formData.image_url || ""}
                     onChange={url => setFormData({ ...formData, image_url: url })}
                   />
                 </Grid>

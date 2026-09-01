@@ -18,7 +18,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import {
-  IconListCheck,
   IconMail,
   IconUser,
   IconSettings,
@@ -114,7 +113,7 @@ const Profile = () => {
           aria-expanded={open ? "true" : undefined}
         >
           <Avatar
-            src={currentUser?.avatar || undefined}
+            src={(currentUser as any)?.avatar || undefined}
             alt={currentUser?.username || "Profile"}
             sx={{
               width: 40,
@@ -126,7 +125,7 @@ const Profile = () => {
                 `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
             }}
           >
-            {!currentUser?.avatar && (currentUser?.username?.charAt(0)?.toUpperCase() || "U")}
+            {!(currentUser as any)?.avatar && (currentUser?.username?.charAt(0)?.toUpperCase() || "U")}
           </Avatar>
           <Box sx={{ display: { xs: "none", sm: "block" }, minWidth: 0 }}>
             <Typography
@@ -176,7 +175,7 @@ const Profile = () => {
         <Box sx={{ p: 2, pb: 1 }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Avatar
-              src={currentUser?.avatar || undefined}
+              src={(currentUser as any)?.avatar || undefined}
               alt={currentUser?.username || "Profile"}
               sx={{ 
                 width: 48, 
@@ -186,7 +185,7 @@ const Profile = () => {
                 fontWeight: "bold"
               }}
             >
-              {!currentUser?.avatar && (currentUser?.username?.charAt(0)?.toUpperCase() || "U")}
+              {!(currentUser as any)?.avatar && (currentUser?.username?.charAt(0)?.toUpperCase() || "U")}
             </Avatar>
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>

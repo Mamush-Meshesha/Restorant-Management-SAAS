@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback, Component, ErrorInfo, ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, Component } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import {
   Box, Grid, Card, Typography, Stack, useTheme,
   Button, IconButton, TextField, Divider,

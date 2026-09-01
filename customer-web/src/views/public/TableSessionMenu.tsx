@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 import { 
   Box, Typography, Container, AppBar, Toolbar, IconButton, 
   Button, Card, CardContent, CardMedia, CircularProgress, 
-  Drawer, Badge, Stack, Fab, Divider, Grid
+  Drawer, Badge, Stack, Fab, Grid
 } from "@mui/material";
 import { 
   IconArrowLeft, IconBell, IconReceipt, IconShoppingBag, 

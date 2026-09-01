@@ -1,19 +1,19 @@
-import { useState } from "react";
+
 import {
   Box, Card, CardContent, Typography, Stack, Divider,
-  Switch, FormControlLabel, Button, Grid, Paper, Chip, alpha,
+  Switch, FormControlLabel, Grid, Paper, Chip, alpha,
   ToggleButtonGroup, ToggleButton, Tooltip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
-  IconMoon, IconSun, IconPalette, IconBell,
+  IconMoon, IconSun, IconPalette,
   IconDeviceDesktop, IconCheck, IconLayout,
 } from "@tabler/icons-react";
 import { useAppDispatch, useAppSelector } from "@/hooks/auth";
 import {
   toggleThemeMode, setPrimaryColor, setFontSize, setSidebarCompact,
 } from "@/redux/slices/themeSlice";
-import { toast } from "react-toastify";
+
 
 const COLOR_OPTIONS = [
   { key: "espresso", label: "Espresso", main: "#2B2118", accent: "#D4A017" },

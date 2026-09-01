@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box, Card, CardContent, Typography, Stack, Button, useTheme,
   Grid, Avatar, alpha, ToggleButtonGroup, ToggleButton, Divider, Chip
@@ -83,7 +83,7 @@ export default function RevenuePage() {
   const [summary, setSummary] = useState<any>(null);
   const [dailyData, setDailyData] = useState<any[]>([]);
   const [expenseData, setExpenseData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   const getDateParams = useCallback(() => {
     const now = new Date();
@@ -181,7 +181,7 @@ export default function RevenuePage() {
 
       {/* ── KPI Cards ── */}
       <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }} >
           <KpiCard
             title="Gross Revenue"
             value={`$${grossRevenue.toFixed(2)}`}
@@ -190,7 +190,7 @@ export default function RevenuePage() {
             subtitle={`${orderCount} orders`}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }} >
           <KpiCard
             title="Net Profit"
             value={`$${netProfit.toFixed(2)}`}
@@ -199,7 +199,7 @@ export default function RevenuePage() {
             subtitle="Revenue minus expenses"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }} >
           <KpiCard
             title="Total Expenses"
             value={`$${totalExpenses.toFixed(2)}`}
@@ -208,7 +208,7 @@ export default function RevenuePage() {
             subtitle="Logged expense costs"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }} >
           <KpiCard
             title="Avg Order Value"
             value={`$${avgOrderValue.toFixed(2)}`}
@@ -253,7 +253,7 @@ export default function RevenuePage() {
 
       <Grid container spacing={3} mb={4}>
         {/* ── Revenue Area Chart ── */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }} >
           <Card sx={{ height: "100%", border: `1px solid ${theme.palette.divider}`, boxShadow: "none" }}>
             <CardContent sx={{ p: 3 }}>
               <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
@@ -294,7 +294,7 @@ export default function RevenuePage() {
         </Grid>
 
         {/* ── Expense Breakdown Pie ── */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }} >
           <Card sx={{ height: "100%", border: `1px solid ${theme.palette.divider}`, boxShadow: "none" }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" fontWeight={700} mb={0.5}>Expense Breakdown</Typography>

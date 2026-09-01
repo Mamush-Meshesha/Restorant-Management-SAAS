@@ -107,11 +107,11 @@ function OrderDetailDialog({ order, open, onClose, onStatusChange, onVoidItem, o
 
         <DialogContent sx={{ pt: 2 }}>
           <Grid container spacing={2} mb={2}>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <Typography variant="caption" color="text.secondary">Table</Typography>
               <Typography fontWeight={600}>{order.table?.table_number ?? "Takeaway"}</Typography>
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <Typography variant="caption" color="text.secondary">Placed</Typography>
               <Typography fontWeight={600}>{new Date(order.created_at).toLocaleString()}</Typography>
             </Grid>
@@ -536,7 +536,7 @@ export default function OrdersPage() {
               </Typography>
               <Grid container spacing={2}>
                 {activeStatuses.flatMap(s => grouped[s]).map(order => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={order.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={order.id}>
                     <OrderCard order={order} onClick={() => { setSelected(order); setDetailOpen(true); }} />
                   </Grid>
                 ))}
@@ -552,7 +552,7 @@ export default function OrdersPage() {
               </Divider>
               <Grid container spacing={2}>
                 {archiveStatuses.flatMap(s => grouped[s]).slice(0, 24).map(order => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={order.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={order.id}>
                     <OrderCard order={order} onClick={() => { setSelected(order); setDetailOpen(true); }} />
                   </Grid>
                 ))}
@@ -564,7 +564,7 @@ export default function OrdersPage() {
           {statusFilter !== "ALL" && (
             <Grid container spacing={2}>
               {filtered.map(order => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={order.id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={order.id}>
                   <OrderCard order={order} onClick={() => { setSelected(order); setDetailOpen(true); }} />
                 </Grid>
               ))}

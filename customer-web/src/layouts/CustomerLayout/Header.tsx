@@ -2,7 +2,7 @@ import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, alpha,
 import { IconUser, IconShoppingBag, IconBell } from "@tabler/icons-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppSelector } from "../../redux/hooks";
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { getNotificationsApi } from "../../api/notifications";
 import LiveActivityBanner from "./LiveActivityBanner";
 

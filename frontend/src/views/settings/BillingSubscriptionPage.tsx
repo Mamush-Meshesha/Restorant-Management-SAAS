@@ -6,11 +6,13 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions
 } from "@mui/material";
 import {
-  IconChartPie, IconDownload, IconReceipt, IconCheck
+  IconChartPie, IconDownload, IconReceipt, IconCheck, IconEdit, IconTrash, IconPlus
 } from "@tabler/icons-react";
 import PageContainer from "../../components/container/PageContainer";
-import { getBillingSubscription, getBillingPlans, getBillingInvoices, upgradeSubscription, cancelSubscription, downloadInvoice } from "../../api/_billing";
+import { getBillingSubscription, getBillingPlans, getBillingInvoices, upgradeSubscription, cancelSubscription, downloadInvoice, createBillingPlan, updateBillingPlan, deleteBillingPlan } from "../../api/_billing";
 import { toast } from "react-toastify";
+import { TextField, MenuItem } from "@mui/material";
+import type { RootState } from "../../redux/store";
 
 // ─── TYPES ──────────────────────────────────────────────────────────────────
 interface SubscriptionPlan {
@@ -50,13 +52,15 @@ interface Invoice {
   pdf_url?: string;
 }
 
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setSubscription as setGlobalSubscription } from "../../redux/slices/authSlice";
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function BillingSubscriptionPage() {
   const theme = useTheme();
   const dispatch = useDispatch();
+  const currentUser = useSelector((state: RootState) => state.auth.currentUser);
+  const isSuperAdmin = currentUser?.role?.name === "SUPERADMIN";
   
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -64,6 +68,9 @@ export default function BillingSubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+
+  const [managePlanDialogOpen, setManagePlanDialogOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Partial<SubscriptionPlan> | null>(null);
 
   const [errorStr, setErrorStr] = useState<string | null>(null);
 
@@ -114,6 +121,34 @@ export default function BillingSubscriptionPage() {
         fetchData();
       } catch (err: any) {
         toast.error("Failed to cancel subscription: " + (err.response?.data?.message || err.message));
+      }
+    }
+  };
+
+  const handleSavePlan = async () => {
+    try {
+      if (editingPlan?.id) {
+        await updateBillingPlan(editingPlan.id, editingPlan);
+        toast.success("Plan updated!");
+      } else {
+        await createBillingPlan(editingPlan);
+        toast.success("Plan created!");
+      }
+      setManagePlanDialogOpen(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to save plan");
+    }
+  };
+
+  const handleDeletePlan = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this plan?")) {
+      try {
+        await deleteBillingPlan(id);
+        toast.success("Plan deleted!");
+        fetchData();
+      } catch (err: any) {
+        toast.error(err.response?.data?.message || "Failed to delete plan");
       }
     }
   };
@@ -229,7 +264,14 @@ export default function BillingSubscriptionPage() {
 
         {/* ─── PLAN COMPARISON ─── */}
         <Grid size={12} id="plans-section" mt={4}>
-          <Typography variant="h5" fontWeight={800} mb={3}>Available Plans</Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h5" fontWeight={800}>Available Plans</Typography>
+            {isSuperAdmin && (
+              <Button variant="contained" startIcon={<IconPlus size={20} />} onClick={() => { setEditingPlan({ billing_cycle: "MONTHLY", max_branches: 1, max_users: 5, max_storage_mb: 1024, features: [] }); setManagePlanDialogOpen(true); }}>
+                Create New Plan
+              </Button>
+            )}
+          </Stack>
           <Grid container spacing={3}>
             {plans.map((p) => (
               <Grid size={{ xs: 12, sm: 6, md: 3 }} key={(p as any).id}>
@@ -250,6 +292,17 @@ export default function BillingSubscriptionPage() {
                     <Typography variant="h4" fontWeight={800} mt={2}>
                       ${p.price} <Typography component="span" variant="body2" color="text.secondary">/ {p.billing_cycle}</Typography>
                     </Typography>
+
+                    {isSuperAdmin && (
+                      <Stack direction="row" spacing={1} mt={2}>
+                        <IconButton size="small" color="primary" onClick={() => { setEditingPlan(p); setManagePlanDialogOpen(true); }}>
+                          <IconEdit size={18} />
+                        </IconButton>
+                        <IconButton size="small" color="error" onClick={() => handleDeletePlan(p.id)}>
+                          <IconTrash size={18} />
+                        </IconButton>
+                      </Stack>
+                    )}
                     
                     <Box mt={3} mb={3} flex={1}>
                       {(p.features as unknown as string[] || []).map((feat, i) => (
@@ -334,6 +387,42 @@ export default function BillingSubscriptionPage() {
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setUpgradeDialogOpen(false)} color="inherit">Cancel</Button>
           <Button onClick={handleUpgrade} variant="contained" color="primary">Confirm Upgrade</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Manage Plan Dialog for Superadmin */}
+      <Dialog open={managePlanDialogOpen} onClose={() => setManagePlanDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle fontWeight={800}>{editingPlan?.id ? "Edit Plan" : "Create Plan"}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={3} mt={1}>
+            <TextField label="Name" fullWidth value={editingPlan?.name || ""} onChange={e => setEditingPlan({ ...editingPlan, name: e.target.value })} />
+            <TextField label="Description" fullWidth value={editingPlan?.description || ""} onChange={e => setEditingPlan({ ...editingPlan, description: e.target.value })} />
+            <Stack direction="row" spacing={2}>
+              <TextField label="Price" type="number" fullWidth value={editingPlan?.price ?? ""} onChange={e => setEditingPlan({ ...editingPlan, price: Number(e.target.value) })} />
+              <TextField select label="Billing Cycle" fullWidth value={editingPlan?.billing_cycle || "MONTHLY"} onChange={e => setEditingPlan({ ...editingPlan, billing_cycle: e.target.value })}>
+                <MenuItem value="MONTHLY">Monthly</MenuItem>
+                <MenuItem value="YEARLY">Yearly</MenuItem>
+                <MenuItem value="LIFETIME">Lifetime</MenuItem>
+              </TextField>
+            </Stack>
+            <Stack direction="row" spacing={2}>
+              <TextField label="Max Branches" type="number" fullWidth value={editingPlan?.max_branches ?? ""} onChange={e => setEditingPlan({ ...editingPlan, max_branches: Number(e.target.value) })} />
+              <TextField label="Max Users" type="number" fullWidth value={editingPlan?.max_users ?? ""} onChange={e => setEditingPlan({ ...editingPlan, max_users: Number(e.target.value) })} />
+              <TextField label="Max Storage (MB)" type="number" fullWidth value={editingPlan?.max_storage_mb ?? ""} onChange={e => setEditingPlan({ ...editingPlan, max_storage_mb: Number(e.target.value) })} />
+            </Stack>
+            <TextField 
+              label="Features (comma separated)" 
+              fullWidth 
+              multiline 
+              rows={3} 
+              value={editingPlan?.features?.join(", ") || ""} 
+              onChange={e => setEditingPlan({ ...editingPlan, features: e.target.value.split(",").map(f => f.trim()).filter(Boolean) })} 
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setManagePlanDialogOpen(false)} color="inherit">Cancel</Button>
+          <Button onClick={handleSavePlan} variant="contained" color="primary">Save Plan</Button>
         </DialogActions>
       </Dialog>
     </PageContainer>

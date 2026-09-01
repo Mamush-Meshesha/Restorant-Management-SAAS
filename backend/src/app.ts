@@ -24,7 +24,13 @@ import { setupSwagger } from "./docs/swagger";
 const app = express();
 app.use(cookieParser());
 
-const allowedOrigins = process.env.FRONTEND_URLS?.split(',') || ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:3001', 'http://localhost:3002'];
+const allowedOrigins = process.env.FRONTEND_URLS?.split(',') || [
+  'http://localhost:3000', 
+  'http://localhost:5173', 
+  'http://localhost:3001', 
+  'http://localhost:3002',
+  'https://reserver-manager-full.vercel.app'
+];
 
 app.use(
   cors({

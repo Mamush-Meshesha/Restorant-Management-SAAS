@@ -29,7 +29,8 @@ const allowedOrigins = process.env.FRONTEND_URLS?.split(',') || [
   'http://localhost:5173', 
   'http://localhost:3001', 
   'http://localhost:3002',
-  'https://reserver-manager-full.vercel.app'
+  'https://reserver-manager-full.vercel.app',
+  'https://restorant-management-saas-u6lr.vercel.app'
 ];
 
 app.use(
